@@ -1291,10 +1291,10 @@ impl<ID: EFID> EncapfnMPKRt<ID> {
                 // later on, make sure that untrusted code has indeed cleared PKRU
                 // correctly:
                 test eax, eax
-                jz 100f                // If zero, PKRU cleared correctly.
+                jz 200f                // If zero, PKRU cleared correctly.
                 ud2                    // If not zero, crash with an illegal insn
 
-              100: // _pkru_cleared
+              200: // _pkru_cleared
                 // Now, load the runtime pointer again and restore the Rust stack.
                 // We load the runtime pointer into a callee-saved register that,
                 // by convention, is reserved by all callback invocations:
@@ -1438,19 +1438,19 @@ impl<ID: EFID> EncapfnMPKRt<ID> {
                 // the subtraction underflowed (wrapping), OR when we're below our
                 // stack bottom now:
                 test r15b, r15b        // Check if r15b is 0 (no stack underflow)
-                jnz 100f               // If not zero, underflow occurred!
+                jnz 200f               // If not zero, underflow occurred!
 
                 // Also check if we're lower than stack_bottom:
                 mov r15, qword ptr [r10 + {rtas_foreign_stack_bottom_offset}]
                 cmp r14, r15           // Compare the new stack pointer against bottom
-                jge 200f               // New sp is greater, no underflow!
+                jge 300f               // New sp is greater, no underflow!
 
                 // Stack exceeded, fall through:
-              100: // _stack_sub_underflow
+              200: // _stack_sub_underflow
                 ud2                    // Crash with an illegal instruction
                 // TODO! handle this error gracefully!
 
-              200: // _no_stack_underflow
+              300: // _no_stack_underflow
                 // We have calculated our new stack pointer in r14. We now need to copy
                 // r13 bytes from rsp upward to r14. We stored rsp above, and can thus
                 // increment it. We still want to keep our new sp (r14) and thus modify
@@ -1467,9 +1467,9 @@ impl<ID: EFID> EncapfnMPKRt<ID> {
                 add r13, 7             // Should not overflow, can't copy ~2**64 bytes
                 and r13, -8            // Ensure r13 is a multiple of 8, rounded up
 
-              300: // _stack_copy
+              400: // _stack_copy
                 test r13, r13
-                jz 400f                // if r13 == 0, goto _stack_copied
+                jz 500f                // if r13 == 0, goto _stack_copied
 
                 // Copy a qword from [rsp + {stack_spill} + 8] to [r15], using
                 // rax as a scratch register. We add an 8-byte offset to rsp to
@@ -1481,9 +1481,9 @@ impl<ID: EFID> EncapfnMPKRt<ID> {
                 add rsp, 8
                 add r15, 8
                 sub r13, 8
-                jmp 300b
+                jmp 400b
 
-              400: // _stack_copied
+              500: // _stack_copied
                 // We copied our stack. Now, we use our new stack to push the registers
                 // we need to clobber to execute the WRPKRU instruction:
                 mov rsp, r14           // Switch to the foreign stack
@@ -1506,10 +1506,10 @@ impl<ID: EFID> EncapfnMPKRt<ID> {
                 // copy and make sure that its value matches rax.
                 mov r14d, dword ptr [rip - {rust_thread_state_static} + {rts_pkru_shadow_offset}]
                 cmp eax, r14d
-                je 500f
+                je 600f
                 ud2                    // Crash with an illegal instruction
 
-             500: // _pkru_loaded_verified
+             600: // _pkru_loaded_verified
                 pop rdx                // Pop rdx from foreign stack, still accessible
                 pop rcx                // Pop rcx from foreign stack, still accessible
 
@@ -1535,10 +1535,10 @@ impl<ID: EFID> EncapfnMPKRt<ID> {
                 // later on, make sure that untrusted code has indeed cleared PKRU
                 // correctly:
                 test eax, eax
-                jz 600f                // If zero, PKRU cleared correctly.
+                jz 700f                // If zero, PKRU cleared correctly.
                 ud2                    // If not zero, crash with an illegal insn
 
-              600: // _pkru_cleared
+              700: // _pkru_cleared
                 // Now, load the runtime pointer again and restore the Rust stack,
                 // leaving the return values rax and rdx (currently both pushed to
                 // foreign stack) intact.

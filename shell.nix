@@ -35,7 +35,7 @@ in
 
       # Required for dlopen:
       export LD_LIBRARY_PATH="${pkgs.lib.makeLibraryPath (with pkgs; [
-        libsodium csfml freeglut libGL glew libGLU brotli openblas
+        libsodium csfml freeglut libGL glew libGLU brotli openblas stdenv.cc.cc.lib
       ])}"
 
       # Required for building Tock boards:

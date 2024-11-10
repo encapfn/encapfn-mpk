@@ -9,15 +9,12 @@ mpkrt_foreign_stack_alloc = []
 mpkrt_heap_alloc_mprotect = []
 
 [build-dependencies]
-bindgen = "0.69.4"
+bindgen.workspace = true
 
 [dependencies]
+encapfn.workspace = true
+
 log = "0.4.21"
 memfd = "0.6.4"
 patchelf = "0.2.1"
 tempfile = "3.10.1"
-
-[dependencies.encapfn]
-git = "https://github.com/encapfn/encapfn"
-rev = "e119560ed64c2ef5bc6e98b5992eeb4db6736e12"
-default-features = false

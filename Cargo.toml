@@ -1,0 +1,20 @@
+[workspace]
+resolver = "2"
+members = [
+    "encapfn-mpk",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+
+[workspace.dependencies.encapfn]
+git = "https://github.com/encapfn/encapfn"
+rev = "e119560ed64c2ef5bc6e98b5992eeb4db6736e12"
+# path = "../../encapfn"
+features = [ "std" ]
+
+[workspace.dependencies.bindgen]
+git = "https://github.com/encapfn/rust-bindgen"
+rev = "21a80825e38f15fd3581662310928ada108cef78"
+# path = "../../rust-bindgen/bindgen"

@@ -1200,7 +1200,7 @@ impl<ID: EFID> EncapfnMPKRt<ID> {
         bottom: *const (),
         environ: *const *const std::ffi::c_char,
     ) {
-        core::arch::asm!(
+        core::arch::naked_asm!(
             "
             // We don't rely on the foreign function to retain our
             // callee-saved registers, hence stack them. This is written
@@ -1237,7 +1237,6 @@ impl<ID: EFID> EncapfnMPKRt<ID> {
             ",
             generic_invoke_sym = sym Self::generic_invoke,
             raw_callback_handler_sym = sym Self::raw_callback_handler,
-            options(noreturn),
         );
     }
 
@@ -1265,7 +1264,7 @@ impl<ID: EFID> EncapfnMPKRt<ID> {
 
     #[naked]
     unsafe extern "C" fn raw_callback_handler() {
-        core::arch::asm!(
+        core::arch::naked_asm!(
             "
                 // We arrive here with the MPK protection mechanism still
                 // engaged. Thus, disable those first, and then restore the
@@ -1378,13 +1377,12 @@ impl<ID: EFID> EncapfnMPKRt<ID> {
             rtas_rust_stack_ptr_offset = const std::mem::offset_of!(EncapfnMPKRtAsmState, rust_stack_ptr),
             rtas_foreign_stack_ptr_offset = const std::mem::offset_of!(EncapfnMPKRtAsmState, foreign_stack_ptr),
             rtas_foreign_code_pkru_offset = const std::mem::offset_of!(EncapfnMPKRtAsmState, foreign_code_pkru),
-            options(noreturn),
         )
     }
 
     #[naked]
     unsafe extern "C" fn generic_invoke() {
-        core::arch::asm!(
+        core::arch::naked_asm!(
             "
                 // When entering this symbol, we are supposed to invoke a foreign
                 // function in an isolated protection domain (changing PKRU to revoke
@@ -1590,7 +1588,6 @@ impl<ID: EFID> EncapfnMPKRt<ID> {
             ivr_rdx_offset = const std::mem::offset_of!(EncapfnMPKInvokeResInner, rdx),
             // InvokeResError constants:
             ive_no_error_const = const EncapfnMPKInvokeErr::NoError as usize,
-            options(noreturn),
         );
     }
 }
@@ -1965,7 +1962,7 @@ macro_rules! invoke_impl_rtloc_register {
         {
             #[naked]
             unsafe extern "C" fn invoke() {
-                core::arch::asm!(
+                core::arch::naked_asm!(
                     concat!("
                     // This pushes the stack down by {pushed} bytes. We rely on this
                     // offset below. ALWAYS UPDATE THEM IN TANDEM.
@@ -1991,7 +1988,6 @@ macro_rules! invoke_impl_rtloc_register {
                     invoke_fn = sym Self::generic_invoke,
                     // How many bytes we pushed onto the stack above:
                     pushed = const 48,
-                    options(noreturn),
                );
             }
         }
@@ -2010,7 +2006,7 @@ impl<const STACK_SPILL: usize, const RT_STACK_OFFSET: usize, ID: EFID>
 {
     #[naked]
     unsafe extern "C" fn invoke() {
-        core::arch::asm!(
+        core::arch::naked_asm!(
             "
             // This pushes the stack down by {pushed} bytes. We rely on this
             // offset below. ALWAYS UPDATE THEM IN TANDEM.
@@ -2038,7 +2034,6 @@ impl<const STACK_SPILL: usize, const RT_STACK_OFFSET: usize, ID: EFID>
             // How many bytes we pushed onto the stack above. This value is also used in
             // generic_invoke. When updating this value, ALSO UPDATE IT IN GENERIC INVOKE.
             pushed = const 48,
-            options(noreturn),
         );
     }
 }

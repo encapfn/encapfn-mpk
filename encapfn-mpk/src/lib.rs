@@ -1096,7 +1096,7 @@ impl<ID: EFID> EncapfnMPKRt<ID> {
 
         // Make sure that the library_ro pkey is assigned to all required
         // read-only pages. (Rust will still have read/write access!)
-        assert!(unsafe { std::ptr::addr_of_mut!(RUST_THREAD_STATE) } as usize % PAGE_SIZE == 0);
+        assert!(std::ptr::addr_of_mut!(RUST_THREAD_STATE) as usize % PAGE_SIZE == 0);
         assert!(std::mem::size_of::<RustThreadState>() == 4096);
         assert!(
             0 == unsafe {
@@ -1109,12 +1109,12 @@ impl<ID: EFID> EncapfnMPKRt<ID> {
                 )
             },
             "Failed to pkey_mprotect read-only pages at {:p} for {:x?} bytes",
-            unsafe { std::ptr::addr_of_mut!(RUST_THREAD_STATE) } as *mut std::ffi::c_void,
+            std::ptr::addr_of_mut!(RUST_THREAD_STATE) as *mut std::ffi::c_void,
             std::mem::size_of::<RustThreadState>(),
         );
         pkey_regions.get_mut(&pkey_library_ro).unwrap().push((
             Range {
-                start: unsafe { std::ptr::addr_of_mut!(RUST_THREAD_STATE) } as *mut (),
+                start: std::ptr::addr_of_mut!(RUST_THREAD_STATE) as *mut (),
                 end: unsafe {
                     (std::ptr::addr_of_mut!(RUST_THREAD_STATE) as *mut ())
                         .byte_add(std::mem::size_of::<RustThreadState>())

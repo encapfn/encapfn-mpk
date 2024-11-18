@@ -1630,13 +1630,13 @@ unsafe impl<ID: EFID> EncapfnRt for EncapfnMPKRt<ID> {
 
     fn resolve_symbols<const SYMTAB_SIZE: usize, const FIXED_OFFSET_SYMTAB_SIZE: usize>(
         &self,
-        symbol_table: &'static [&'static CStr; SYMTAB_SIZE],
+        compact_symbol_table: &'static [&'static CStr; SYMTAB_SIZE],
         _fixed_offset_symbol_table: &'static [Option<&'static CStr>; FIXED_OFFSET_SYMTAB_SIZE],
     ) -> Option<Self::SymbolTableState<SYMTAB_SIZE, FIXED_OFFSET_SYMTAB_SIZE>> {
         // TODO: this might use an excessive amount of stack space:
         let mut err: bool = false;
 
-        let symbols = symbol_table.clone().map(|symbol_name| {
+        let symbols = compact_symbol_table.clone().map(|symbol_name| {
             if err {
                 // If we error on one symbol, don't need to loop up others.
                 std::ptr::null()
@@ -1670,10 +1670,11 @@ unsafe impl<ID: EFID> EncapfnRt for EncapfnMPKRt<ID> {
 
     fn lookup_symbol<const SYMTAB_SIZE: usize, const FIXED_OFFSET_SYMTAB_SIZE: usize>(
         &self,
-        index: usize,
+        compact_symtab_index: usize,
+	_fixed_offset_symtab_index: usize,
         symtabstate: &Self::SymbolTableState<SYMTAB_SIZE, FIXED_OFFSET_SYMTAB_SIZE>,
     ) -> Option<*const ()> {
-        symtabstate.symbols.get(index).copied()
+        symtabstate.symbols.get(compact_symtab_index).copied()
     }
 
     // We provide only the required implementations and rely on default

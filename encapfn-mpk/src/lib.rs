@@ -1670,7 +1670,7 @@ unsafe impl<ID: EFID> EncapfnRt for EncapfnMPKRt<ID> {
     fn lookup_symbol<const SYMTAB_SIZE: usize, const FIXED_OFFSET_SYMTAB_SIZE: usize>(
         &self,
         compact_symtab_index: usize,
-	_fixed_offset_symtab_index: usize,
+        _fixed_offset_symtab_index: usize,
         symtabstate: &Self::SymbolTableState<SYMTAB_SIZE, FIXED_OFFSET_SYMTAB_SIZE>,
     ) -> Option<*const ()> {
         symtabstate.symbols.get(compact_symtab_index).copied()

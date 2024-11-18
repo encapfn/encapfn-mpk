@@ -99,7 +99,8 @@ fn main() {
                         validation_only_sodium_public
                     )
                     .as_bytes(),
-                ).unwrap();
+                )
+                .unwrap();
 
                 let start = Instant::now();
                 for i in 0..ITERATIONS_INDEX {
@@ -115,7 +116,8 @@ fn main() {
                         validation_only_sodium_hash
                     )
                     .as_bytes(),
-                ).unwrap();
+                )
+                .unwrap();
             },
         );
     });

@@ -1,0 +1,8 @@
+# Licensed under the Apache License, Version 2.0 or the MIT License.
+# SPDX-License-Identifier: Apache-2.0 OR MIT
+# Copyright Tock Contributors 2023.
+
+[toolchain]
+channel = "nightly-2024-11-16"
+components = ["rustfmt", "clippy"]
+targets = ["x86_64-unknown-linux-gnu"]

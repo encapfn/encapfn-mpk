@@ -32,8 +32,8 @@ pub fn libsodium_get_key_pair_unsafe(
     [u8; crypto_box_PUBLICKEYBYTES as usize],
     [u8; crypto_box_SECRETKEYBYTES as usize],
 ) {
-    let mut p1_pub_key = [0 as u8; crypto_box_PUBLICKEYBYTES as usize];
-    let mut p1_sec_key = [0 as u8; crypto_box_SECRETKEYBYTES as usize];
+    let p1_pub_key = [0 as u8; crypto_box_PUBLICKEYBYTES as usize];
+    let p1_sec_key = [0 as u8; crypto_box_SECRETKEYBYTES as usize];
 
     let mut bytes_array = [0; crypto_box_SEEDBYTES as usize];
     let bytes_slice = seed.as_bytes();
@@ -153,9 +153,9 @@ pub fn libsodium_public_unsafe() {
 
     const CIPHERTEXT_LEN: usize = crypto_box_MACBYTES as usize + M_TO_SEND.len() as usize;
 
-    let mut cipher = [0 as u8; CIPHERTEXT_LEN];
+    let cipher = [0 as u8; CIPHERTEXT_LEN];
 
-    let res = unsafe {
+    unsafe {
         crypto_box_easy(
             cipher.as_ptr() as *mut u8,
             m_to_send.as_ptr() as *const u8,
@@ -163,14 +163,14 @@ pub fn libsodium_public_unsafe() {
             nonce.as_ptr() as *const u8,
             p2_pub_key.as_ptr() as *const u8,
             p1_sec_key.as_ptr() as *const u8,
-        )
-    };
+        );
+    }
 
     // println!("Cipher: {:2x?}", cipher);
 
     // Decrypt
     let decrypted = [0; M_TO_SEND.len()];
-    let res = unsafe {
+    unsafe {
         crypto_box_open_easy(
             decrypted.as_ptr() as *mut u8,
             cipher.as_ptr() as *const u8,
@@ -178,10 +178,10 @@ pub fn libsodium_public_unsafe() {
             nonce.as_ptr() as *const u8,
             p1_pub_key.as_ptr() as *const u8,
             p2_sec_key.as_ptr() as *const u8,
-        )
-    };
+        );
+    }
 
-    let s = String::from_utf8((&decrypted).to_vec()).expect("Decrypt");
+    let _s = String::from_utf8((&decrypted).to_vec()).expect("Decrypt");
     // println!("Decrypted: {}", s);
 }
 
@@ -223,7 +223,7 @@ pub fn libsodium_public<ID: EFID, RT: EncapfnRt<ID = ID>, L: LibSodium<ID, RT, R
 
     // // println!("Rand seed bytes {:2x?}", &EFCopy::new(rand_seed_bytes).validate().unwrap());
 
-    let nonce = lib
+    let _nonce = lib
         .rt()
         .allocate_stacked_t_mut::<[u8; randombytes_SEEDBYTES as usize], _, _>(
             alloc,
@@ -306,30 +306,30 @@ pub fn libsodium_public<ID: EFID, RT: EncapfnRt<ID = ID>, L: LibSodium<ID, RT, R
 
     // Decrypt
 
-    let decrypted =
-    lib.rt().allocate_stacked_t_mut::<[u8; CIPHERTEXT_LEN as usize], _, _>(alloc, |cipher_to_send, alloc| {
-        cipher_to_send.write_copy(&EFCopy::new(cipher), access);
+    let _decrypted =
+	lib.rt().allocate_stacked_t_mut::<[u8; CIPHERTEXT_LEN as usize], _, _>(alloc, |cipher_to_send, alloc| {
+            cipher_to_send.write_copy(&EFCopy::new(cipher), access);
 
             lib.rt().allocate_stacked_t_mut::<[u8; crypto_box_NONCEBYTES as usize], _, _>(alloc, |nonce_to_send, alloc| {
-        nonce_to_send.write_copy(&EFCopy::new(nonce), access);
+		nonce_to_send.write_copy(&EFCopy::new(nonce), access);
 
-        lib.rt().allocate_stacked_t_mut::<[u8; crypto_box_PUBLICKEYBYTES as usize], _, _>(alloc, |pub_key_to_send, alloc| {
+		lib.rt().allocate_stacked_t_mut::<[u8; crypto_box_PUBLICKEYBYTES as usize], _, _>(alloc, |pub_key_to_send, alloc| {
                     pub_key_to_send.write_copy(&EFCopy::new(p1_pub_key), access);
 
                     lib.rt().allocate_stacked_t_mut::<[u8; crypto_box_SECRETKEYBYTES as usize], _, _>(alloc, |sec_key_to_send, alloc| {
-            sec_key_to_send.write_copy(&EFCopy::new(p2_sec_key), access);
+			sec_key_to_send.write_copy(&EFCopy::new(p2_sec_key), access);
 
-            lib.rt().allocate_stacked_t_mut::<[u8; M_TO_SEND.len() as usize], _, _>(alloc, |decrypted, _alloc| {
+			lib.rt().allocate_stacked_t_mut::<[u8; M_TO_SEND.len() as usize], _, _>(alloc, |decrypted, _alloc| {
                             decrypted.write([0;M_TO_SEND.len()], access);
 
                             let res = lib.crypto_box_open_easy(
-                            decrypted.as_ptr().cast::<u8>().into(),
-                            cipher_to_send.as_ptr().cast::<u8>().into(),
-                            CIPHERTEXT_LEN as u64,
-                            nonce_to_send.as_ptr().cast::<u8>().into(),
-                            pub_key_to_send.as_ptr().cast::<u8>().into(),
-                            sec_key_to_send.as_ptr().cast::<u8>().into(),
-                            access
+				decrypted.as_ptr().cast::<u8>().into(),
+				cipher_to_send.as_ptr().cast::<u8>().into(),
+				CIPHERTEXT_LEN as u64,
+				nonce_to_send.as_ptr().cast::<u8>().into(),
+				pub_key_to_send.as_ptr().cast::<u8>().into(),
+				sec_key_to_send.as_ptr().cast::<u8>().into(),
+				access
                             ).unwrap();
 
                             assert!(res.validate().unwrap() == 0);
@@ -344,11 +344,11 @@ pub fn libsodium_public<ID: EFID, RT: EncapfnRt<ID = ID>, L: LibSodium<ID, RT, R
                             //         .unwrap(),
                             // );
 
-            }).unwrap()
+			}).unwrap()
                     }).unwrap()
-        }).unwrap()
+		}).unwrap()
             }).unwrap()
-    }).unwrap();
+	}).unwrap();
 
     // let s = String::from_utf8((&decrypted).to_vec()).expect("Decrypt");
     // println!("Decrypted: {}", s);
@@ -396,7 +396,7 @@ pub fn libsodium_public_validate<
 
     // // println!("Rand seed bytes {:2x?}", &EFCopy::new(rand_seed_bytes).validate().unwrap());
 
-    let nonce = lib
+    let _nonce = lib
         .rt()
         .allocate_stacked_t_mut::<[u8; randombytes_SEEDBYTES as usize], _, _>(
             alloc,
@@ -479,30 +479,30 @@ pub fn libsodium_public_validate<
 
     // Decrypt
 
-    let decrypted =
-    lib.rt().allocate_stacked_t_mut::<[u8; CIPHERTEXT_LEN as usize], _, _>(alloc, |cipher_to_send, alloc| {
-        cipher_to_send.write_copy(&EFCopy::new(cipher), access);
+    let _decrypted =
+	lib.rt().allocate_stacked_t_mut::<[u8; CIPHERTEXT_LEN as usize], _, _>(alloc, |cipher_to_send, alloc| {
+            cipher_to_send.write_copy(&EFCopy::new(cipher), access);
 
             lib.rt().allocate_stacked_t_mut::<[u8; crypto_box_NONCEBYTES as usize], _, _>(alloc, |nonce_to_send, alloc| {
-        nonce_to_send.write_copy(&EFCopy::new(nonce), access);
+		nonce_to_send.write_copy(&EFCopy::new(nonce), access);
 
-        lib.rt().allocate_stacked_t_mut::<[u8; crypto_box_PUBLICKEYBYTES as usize], _, _>(alloc, |pub_key_to_send, alloc| {
+		lib.rt().allocate_stacked_t_mut::<[u8; crypto_box_PUBLICKEYBYTES as usize], _, _>(alloc, |pub_key_to_send, alloc| {
                     pub_key_to_send.write_copy(&EFCopy::new(p1_pub_key), access);
 
                     lib.rt().allocate_stacked_t_mut::<[u8; crypto_box_SECRETKEYBYTES as usize], _, _>(alloc, |sec_key_to_send, alloc| {
-            sec_key_to_send.write_copy(&EFCopy::new(p2_sec_key), access);
+			sec_key_to_send.write_copy(&EFCopy::new(p2_sec_key), access);
 
-            lib.rt().allocate_stacked_t_mut::<[u8; M_TO_SEND.len() as usize], _, _>(alloc, |decrypted, _alloc| {
+			lib.rt().allocate_stacked_t_mut::<[u8; M_TO_SEND.len() as usize], _, _>(alloc, |decrypted, _alloc| {
                             decrypted.write([0;M_TO_SEND.len()], access);
 
                             let res = lib.crypto_box_open_easy(
-                decrypted.as_ptr().cast::<u8>().into(),
-                cipher_to_send.as_ptr().cast::<u8>().into(),
-                CIPHERTEXT_LEN as u64,
-                nonce_to_send.as_ptr().cast::<u8>().into(),
-                pub_key_to_send.as_ptr().cast::<u8>().into(),
-                sec_key_to_send.as_ptr().cast::<u8>().into(),
-                access
+				decrypted.as_ptr().cast::<u8>().into(),
+				cipher_to_send.as_ptr().cast::<u8>().into(),
+				CIPHERTEXT_LEN as u64,
+				nonce_to_send.as_ptr().cast::<u8>().into(),
+				pub_key_to_send.as_ptr().cast::<u8>().into(),
+				sec_key_to_send.as_ptr().cast::<u8>().into(),
+				access
                             ).unwrap();
 
                             assert!(res.validate().unwrap() == 0);
@@ -517,30 +517,30 @@ pub fn libsodium_public_validate<
                                     .unwrap(),
                             );
 
-            }).unwrap()
+			}).unwrap()
                     }).unwrap()
-        }).unwrap()
+		}).unwrap()
             }).unwrap()
-    }).unwrap();
+	}).unwrap();
 
     // let s = String::from_utf8((&decrypted).to_vec()).expect("Decrypt");
     // println!("Decrypted: {}", s);
 }
 
 pub fn test_libsodium_unsafe() {
-    let mut hash: EFCopy<[u8; 32]> = EFCopy::zeroed();
+    let _hash: EFCopy<[u8; 32]> = EFCopy::zeroed();
 
-    let ver_major = unsafe { sodium_library_version_major() };
-    let ver_minor = unsafe { sodium_library_version_minor() };
+    let _ver_major = unsafe { sodium_library_version_major() };
+    let _ver_minor = unsafe { sodium_library_version_minor() };
 
     // println!("Libsodium Version: {:?}.{:?}", ver_major, ver_minor);
 
-    let rand_bytes = unsafe { randombytes_random() };
+    let _rand_bytes = unsafe { randombytes_random() };
     // println!("random u32: {:?}", rand_bytes);
 
     let message = "Arbitrary data to hash";
 
-    let mut hash = [0 as u8; 32];
+    let hash = [0 as u8; 32];
     unsafe {
         crypto_generichash(
             hash.as_ptr() as *mut u8,
@@ -564,19 +564,19 @@ pub fn test_libsodium<ID: EFID, RT: EncapfnRt<ID = ID>, L: LibSodium<ID, RT, RT 
 
     // println!("Runtime pointer: {:p}", lib.rt());
 
-    let ver_major = lib
+    let _ver_major = lib
         .sodium_library_version_major(access)
         .unwrap()
         .validate()
         .unwrap();
-    let ver_minor = lib
+    let _ver_minor = lib
         .sodium_library_version_minor(access)
         .unwrap()
         .validate()
         .unwrap();
     // println!("Libsodium Version: {:?}.{:?}", ver_major, ver_minor);
 
-    let rand_bytes = lib.randombytes_random(access).unwrap().validate().unwrap();
+    let _rand_bytes = lib.randombytes_random(access).unwrap().validate().unwrap();
     // println!("random u32: {:?}", rand_bytes);
 
     let message = "Arbitrary data to hash";
@@ -592,7 +592,7 @@ pub fn test_libsodium<ID: EFID, RT: EncapfnRt<ID = ID>, L: LibSodium<ID, RT, RT 
                 hash = lib
                     .rt()
                     .allocate_stacked_t_mut::<[u8; 32], _, _>(alloc, |hash_ref, _alloc| {
-                        let res = lib
+                        let _res = lib
                             .crypto_generichash(
                                 hash_ref.as_ptr().cast::<u8>().into(),
                                 32,
@@ -668,17 +668,20 @@ pub fn calc_hash<ID: EFID, RT: EncapfnRt<ID = ID>, L: LibSodium<ID, RT, RT = RT>
 
             lib.rt()
                 .allocate_stacked_t_mut::<[u8; 32], _, _>(alloc, |hash, _alloc| {
-                    let res = lib.crypto_generichash(
-                        <EFPtr<[u8; 32]> as Into<*mut [u8; 32]>>::into(hash.as_ptr()) as *mut u8,
-                        32,
-                        <EFPtr<[u8; 4096]> as Into<*const [u8; 4096]>>::into(message.as_ptr())
-                            as *const u8,
-                        4096,
-                        null(),
-                        0,
-                        access,
-                    );
-                    // assert!(res.validate().unwrap() == 0);
+                    let res = lib
+                        .crypto_generichash(
+                            <EFPtr<[u8; 32]> as Into<*mut [u8; 32]>>::into(hash.as_ptr())
+                                as *mut u8,
+                            32,
+                            <EFPtr<[u8; 4096]> as Into<*const [u8; 4096]>>::into(message.as_ptr())
+                                as *const u8,
+                            4096,
+                            null(),
+                            0,
+                            access,
+                        )
+                        .unwrap();
+                    assert!(res.validate().unwrap() == 0);
                 })
                 .unwrap();
         })
@@ -697,18 +700,21 @@ pub fn calc_hash_validate<ID: EFID, RT: EncapfnRt<ID = ID>, L: LibSodium<ID, RT,
 
             lib.rt()
                 .allocate_stacked_t_mut::<[u8; 32], _, _>(alloc, |hash, _alloc| {
-                    let res = lib.crypto_generichash(
-                        <EFPtr<[u8; 32]> as Into<*mut [u8; 32]>>::into(hash.as_ptr()) as *mut u8,
-                        32,
-                        <EFPtr<[u8; 4096]> as Into<*const [u8; 4096]>>::into(message.as_ptr())
-                            as *const u8,
-                        4096,
-                        null(),
-                        0,
-                        access,
-                    );
+                    let res = lib
+                        .crypto_generichash(
+                            <EFPtr<[u8; 32]> as Into<*mut [u8; 32]>>::into(hash.as_ptr())
+                                as *mut u8,
+                            32,
+                            <EFPtr<[u8; 4096]> as Into<*const [u8; 4096]>>::into(message.as_ptr())
+                                as *const u8,
+                            4096,
+                            null(),
+                            0,
+                            access,
+                        )
+                        .unwrap();
                     core::hint::black_box(&*hash.validate(access).unwrap());
-                    // assert!(res.validate().unwrap() == 0);
+                    assert!(res.validate().unwrap() == 0);
                 })
                 .unwrap();
         })
@@ -718,7 +724,7 @@ pub fn calc_hash_validate<ID: EFID, RT: EncapfnRt<ID = ID>, L: LibSodium<ID, RT,
 pub fn calc_hash_unsafe() {
     let message = [42 as u8; 4096];
 
-    let mut hash = [0 as u8; 32];
+    let hash = [0 as u8; 32];
     unsafe {
         crypto_generichash(
             hash.as_ptr() as *mut u8,

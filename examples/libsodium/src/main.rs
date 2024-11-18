@@ -9,7 +9,7 @@ use ef_libsodium_lib::libsodium::LibSodium;
 use ef_libsodium_lib::{
     calc_hash, calc_hash_unsafe, calc_hash_validate, libsodium_public, libsodium_public_unsafe,
     libsodium_public_validate, test_libsodium, test_libsodium_unsafe, with_mockrt_lib,
-    with_mpkrt_lib, with_no_lib,
+    with_mpkrt_lib,
 };
 
 use std::fs::File;
@@ -32,6 +32,7 @@ struct Args {
     runtime: EFRuntime,
 }
 
+#[allow(unused)]
 fn run<ID: EFID, RT: EncapfnRt<ID = ID>, L: LibSodium<ID, RT, RT = RT>>(
     _args: Args,
     lib: &L,
@@ -43,6 +44,7 @@ fn run<ID: EFID, RT: EncapfnRt<ID = ID>, L: LibSodium<ID, RT, RT = RT>>(
     println!("Success!")
 }
 
+#[allow(unused)]
 fn run_unsafe() {
     test_libsodium_unsafe();
     libsodium_public_unsafe();
@@ -59,7 +61,7 @@ fn main() {
     const ITERATIONS_INDEX: usize = 100000;
 
     let start = Instant::now();
-    for i in 0..ITERATIONS_INDEX {
+    for _ in 0..ITERATIONS_INDEX {
         libsodium_public_unsafe();
     }
     let end = Instant::now();
@@ -69,7 +71,7 @@ fn main() {
         .unwrap();
 
     let start = Instant::now();
-    for i in 0..ITERATIONS_INDEX {
+    for _ in 0..ITERATIONS_INDEX {
         calc_hash_unsafe();
     }
     let end = Instant::now();
@@ -86,7 +88,7 @@ fn main() {
             >::new(),
             |lib, mut alloc, mut access| {
                 let start = Instant::now();
-                for i in 0..ITERATIONS_INDEX {
+                for _ in 0..ITERATIONS_INDEX {
                     libsodium_public_validate(&lib, &mut alloc, &mut access);
                 }
                 let end = Instant::now();
@@ -103,7 +105,7 @@ fn main() {
                 .unwrap();
 
                 let start = Instant::now();
-                for i in 0..ITERATIONS_INDEX {
+                for _ in 0..ITERATIONS_INDEX {
                     calc_hash_validate(&lib, &mut alloc, &mut access);
                 }
                 let end = Instant::now();
@@ -126,18 +128,18 @@ fn main() {
         with_mpkrt_lib(brand, |lib, mut alloc, mut access| {
             // Warmups
 
-            for i in 0..ITERATIONS_INDEX {
+            for _ in 0..ITERATIONS_INDEX {
                 libsodium_public(&lib, &mut alloc, &mut access);
             }
 
-            for i in 0..ITERATIONS_INDEX {
+            for _ in 0..ITERATIONS_INDEX {
                 calc_hash(&lib, &mut alloc, &mut access);
             }
 
             //
 
             let start = Instant::now();
-            for i in 0..ITERATIONS_INDEX {
+            for _ in 0..ITERATIONS_INDEX {
                 libsodium_public(&lib, &mut alloc, &mut access);
             }
             let end = Instant::now();
@@ -150,19 +152,21 @@ fn main() {
                     protection_only_sodium_public
                 )
                 .as_bytes(),
-            );
+            )
+            .unwrap();
 
             let start = Instant::now();
-            for i in 0..ITERATIONS_INDEX {
+            for _ in 0..ITERATIONS_INDEX {
                 libsodium_public_validate(&lib, &mut alloc, &mut access);
             }
             let end = Instant::now();
             let both_sodium_public = end.duration_since(start).as_nanos() as f64 / ITERATIONS;
 
-            file.write_all(format!("both_sodium_public = {:?}\n", both_sodium_public).as_bytes());
+            file.write_all(format!("both_sodium_public = {:?}\n", both_sodium_public).as_bytes())
+                .unwrap();
 
             let start = Instant::now();
-            for i in 0..ITERATIONS_INDEX {
+            for _ in 0..ITERATIONS_INDEX {
                 calc_hash(&lib, &mut alloc, &mut access);
             }
             let end = Instant::now();
@@ -175,16 +179,18 @@ fn main() {
                     protection_only_sodium_hash
                 )
                 .as_bytes(),
-            );
+            )
+            .unwrap();
 
             let start = Instant::now();
-            for i in 0..ITERATIONS_INDEX {
+            for _ in 0..ITERATIONS_INDEX {
                 calc_hash_validate(&lib, &mut alloc, &mut access);
             }
             let end = Instant::now();
             let both_sodium_hash = end.duration_since(start).as_nanos() as f64 / ITERATIONS;
 
-            file.write_all(format!("both_sodium_hash = {:?}\n", both_sodium_hash).as_bytes());
+            file.write_all(format!("both_sodium_hash = {:?}\n", both_sodium_hash).as_bytes())
+                .unwrap();
         });
     });
 

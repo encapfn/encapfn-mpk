@@ -1,7 +1,6 @@
 #![feature(
     naked_functions,
     linked_list_retain,
-    asm_const,
     thread_local,
     maybe_uninit_as_bytes,
     maybe_uninit_write_slice

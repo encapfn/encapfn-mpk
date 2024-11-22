@@ -75,7 +75,7 @@ checksum = "ace50bade8e6234aa140d9a2f552bbee1db4d353f69b8217bc503490fc1a9f26"
 [[package]]
 name = "bindgen"
 version = "0.69.4"
-source = "git+https://github.com/encapfn/rust-bindgen?rev=e10d60a10c23a9ad250b2e280ffc7a8731b0a481#e10d60a10c23a9ad250b2e280ffc7a8731b0a481"
+source = "git+https://github.com/encapfn/rust-bindgen?rev=303b1f41e7ea715df515cd43ba7909bf61cf97cf#303b1f41e7ea715df515cd43ba7909bf61cf97cf"
 dependencies = [
  "bitflags",
  "cexpr",
@@ -310,7 +310,7 @@ checksum = "60b1af1c220855b6ceac025d3f6ecdd2b7c4894bfe9cd9bda4fbb4bc7c0d4cf0"
 [[package]]
 name = "encapfn"
 version = "0.1.0"
-source = "git+https://github.com/encapfn/encapfn?rev=91517a0775820b28d85aef28b7ce5d83acdc03ea#91517a0775820b28d85aef28b7ce5d83acdc03ea"
+source = "git+https://github.com/encapfn/encapfn?rev=a4d89b63c55256485ce459d92015fa218476ade0#a4d89b63c55256485ce459d92015fa218476ade0"
 
 [[package]]
 name = "encapfn-mpk"

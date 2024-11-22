@@ -1624,6 +1624,8 @@ unsafe impl<ID: EFID> EncapfnRt for EncapfnMPKRt<ID> {
     type ID = ID;
     type AllocTracker<'a> = EncapfnMPKRtAllocTracker;
     type ABI = SysVAMD64ABI;
+    type CallbackTrampolineFn = unsafe extern "C" fn();
+    type CallbackCtx = ();
     type SymbolTableState<const SYMTAB_SIZE: usize, const FIXED_OFFSET_SYMTAB_SIZE: usize> =
         EncapfnMPKSymbolTable<SYMTAB_SIZE>;
 
@@ -1674,6 +1676,26 @@ unsafe impl<ID: EFID> EncapfnRt for EncapfnMPKRt<ID> {
         symtabstate: &Self::SymbolTableState<SYMTAB_SIZE, FIXED_OFFSET_SYMTAB_SIZE>,
     ) -> Option<*const ()> {
         symtabstate.symbols.get(compact_symtab_index).copied()
+    }
+
+    fn setup_callback<'a, C, F, R>(
+        &self,
+        _callback: &'a mut C,
+        _alloc_scope: &mut AllocScope<'_, Self::AllocTracker<'_>, Self::ID>,
+        _fun: F,
+    ) -> Result<R, EFError>
+    where
+        C: FnMut(
+            &Self::CallbackCtx,
+            &mut AllocScope<'_, Self::AllocTracker<'_>, Self::ID>,
+            &mut AccessScope<Self::ID>,
+        ),
+        F: for<'b> FnOnce(
+            *const Self::CallbackTrampolineFn,
+            &'b mut AllocScope<'_, Self::AllocTracker<'_>, Self::ID>,
+        ) -> R,
+    {
+        unimplemented!();
     }
 
     // We provide only the required implementations and rely on default

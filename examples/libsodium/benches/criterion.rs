@@ -11,8 +11,8 @@ use encapfn::types::{AccessScope, AllocScope, EFPtr};
 
 use ef_libsodium_lib::libsodium::LibSodium;
 use ef_libsodium_lib::{
-    libsodium::crypto_generichash, libsodium_public, libsodium_public_unsafe, with_mockrt_lib,
-    with_mpkrt_lib, calc_hash, calc_hash_validate, calc_hash_unsafe,
+    calc_hash, calc_hash_unsafe, calc_hash_validate, libsodium::crypto_generichash,
+    libsodium_public, libsodium_public_unsafe, with_mockrt_lib, with_mpkrt_lib,
 };
 
 fn bench_libsodium(c: &mut Criterion) {

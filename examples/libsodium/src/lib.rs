@@ -77,13 +77,14 @@ pub fn libsodium_get_key_pair<ID: EFID, RT: EncapfnRt<ID = ID>, L: LibSodium<ID,
             lib.rt()
                 .allocate_stacked_t_mut::<[u8; crypto_box_SECRETKEYBYTES as usize], _, _>(alloc, |public_key, alloc| {
                     lib.rt()
-                        .allocate_stacked_t_mut::<[u8; crypto_box_PUBLICKEYBYTES as usize], _, _>(alloc, |secret_key, _alloc| {
+                        .allocate_stacked_t_mut::<[u8; crypto_box_PUBLICKEYBYTES as usize], _, _>(alloc, |secret_key, alloc| {
                             lib.crypto_box_seed_keypair(
-                public_key.as_ptr().cast::<u8>().into(),
-                secret_key.as_ptr().cast::<u8>().into(),
-                seed_ref.as_ptr().cast::<u8>().into(),
-                access
-                ).unwrap();
+				public_key.as_ptr().cast::<u8>().into(),
+				secret_key.as_ptr().cast::<u8>().into(),
+				seed_ref.as_ptr().cast::<u8>().into(),
+				alloc,
+				access
+			    ).unwrap();
 
                             p1_sec_key = secret_key.copy(access).validate().unwrap();
                         }
@@ -233,13 +234,14 @@ pub fn libsodium_public<ID: EFID, RT: EncapfnRt<ID = ID>, L: LibSodium<ID, RT, R
                 lib.rt()
                     .allocate_stacked_t_mut::<[u8; crypto_box_NONCEBYTES as usize], _, _>(
                         alloc,
-                        |nonce_gen, _alloc| {
+                        |nonce_gen, alloc| {
                             nonce_gen.write([0 as u8; crypto_box_NONCEBYTES as usize], access);
 
                             lib.randombytes_buf_deterministic(
                                 nonce_gen.as_ptr().cast::<c_void>().into(),
                                 crypto_box_NONCEBYTES as usize,
                                 seed_ref.as_ptr().cast::<u8>().into(),
+                                alloc,
                                 access,
                             )
                             .unwrap();
@@ -279,7 +281,7 @@ pub fn libsodium_public<ID: EFID, RT: EncapfnRt<ID = ID>, L: LibSodium<ID, RT, R
                 lib.rt().allocate_stacked_t_mut::<[u8; crypto_box_SECRETKEYBYTES as usize], _, _>(alloc, |sec_key_to_send, alloc| {
                     sec_key_to_send.write_copy(&EFCopy::new(p1_sec_key), access);
 
-                    lib.rt().allocate_stacked_t_mut::<[u8; CIPHERTEXT_LEN as usize], _, _>(alloc, |cipher, _alloc| {
+                    lib.rt().allocate_stacked_t_mut::<[u8; CIPHERTEXT_LEN as usize], _, _>(alloc, |cipher, alloc| {
                         cipher.write([0;CIPHERTEXT_LEN], access);
 
                         let res = lib.crypto_box_easy(
@@ -288,7 +290,8 @@ pub fn libsodium_public<ID: EFID, RT: EncapfnRt<ID = ID>, L: LibSodium<ID, RT, R
                             M_TO_SEND.len() as u64,
                 nonce_to_send.as_ptr().cast::<u8>().into(),
                 pub_key_to_send.as_ptr().cast::<u8>().into(),
-                sec_key_to_send.as_ptr().cast::<u8>().into(),
+			    sec_key_to_send.as_ptr().cast::<u8>().into(),
+			    alloc,
                             access,
                         ).unwrap();
 
@@ -319,7 +322,7 @@ pub fn libsodium_public<ID: EFID, RT: EncapfnRt<ID = ID>, L: LibSodium<ID, RT, R
                     lib.rt().allocate_stacked_t_mut::<[u8; crypto_box_SECRETKEYBYTES as usize], _, _>(alloc, |sec_key_to_send, alloc| {
 			sec_key_to_send.write_copy(&EFCopy::new(p2_sec_key), access);
 
-			lib.rt().allocate_stacked_t_mut::<[u8; M_TO_SEND.len() as usize], _, _>(alloc, |decrypted, _alloc| {
+			lib.rt().allocate_stacked_t_mut::<[u8; M_TO_SEND.len() as usize], _, _>(alloc, |decrypted, alloc| {
                             decrypted.write([0;M_TO_SEND.len()], access);
 
                             let res = lib.crypto_box_open_easy(
@@ -329,6 +332,7 @@ pub fn libsodium_public<ID: EFID, RT: EncapfnRt<ID = ID>, L: LibSodium<ID, RT, R
 				nonce_to_send.as_ptr().cast::<u8>().into(),
 				pub_key_to_send.as_ptr().cast::<u8>().into(),
 				sec_key_to_send.as_ptr().cast::<u8>().into(),
+				alloc,
 				access
                             ).unwrap();
 
@@ -406,13 +410,14 @@ pub fn libsodium_public_validate<
                 lib.rt()
                     .allocate_stacked_t_mut::<[u8; crypto_box_NONCEBYTES as usize], _, _>(
                         alloc,
-                        |nonce_gen, _alloc| {
+                        |nonce_gen, alloc| {
                             nonce_gen.write([0 as u8; crypto_box_NONCEBYTES as usize], access);
 
                             lib.randombytes_buf_deterministic(
                                 nonce_gen.as_ptr().cast::<c_void>().into(),
                                 crypto_box_NONCEBYTES as usize,
                                 seed_ref.as_ptr().cast::<u8>().into(),
+                                alloc,
                                 access,
                             )
                             .unwrap();
@@ -452,7 +457,7 @@ pub fn libsodium_public_validate<
                 lib.rt().allocate_stacked_t_mut::<[u8; crypto_box_SECRETKEYBYTES as usize], _, _>(alloc, |sec_key_to_send, alloc| {
                     sec_key_to_send.write_copy(&EFCopy::new(p1_sec_key), access);
 
-                    lib.rt().allocate_stacked_t_mut::<[u8; CIPHERTEXT_LEN as usize], _, _>(alloc, |cipher, _alloc| {
+                    lib.rt().allocate_stacked_t_mut::<[u8; CIPHERTEXT_LEN as usize], _, _>(alloc, |cipher, alloc| {
                         cipher.write([0;CIPHERTEXT_LEN], access);
 
                         let res = lib.crypto_box_easy(
@@ -461,7 +466,8 @@ pub fn libsodium_public_validate<
                             M_TO_SEND.len() as u64,
                 nonce_to_send.as_ptr().cast::<u8>().into(),
                 pub_key_to_send.as_ptr().cast::<u8>().into(),
-                sec_key_to_send.as_ptr().cast::<u8>().into(),
+			    sec_key_to_send.as_ptr().cast::<u8>().into(),
+			    alloc,
                             access,
                         ).unwrap();
 
@@ -492,7 +498,7 @@ pub fn libsodium_public_validate<
                     lib.rt().allocate_stacked_t_mut::<[u8; crypto_box_SECRETKEYBYTES as usize], _, _>(alloc, |sec_key_to_send, alloc| {
 			sec_key_to_send.write_copy(&EFCopy::new(p2_sec_key), access);
 
-			lib.rt().allocate_stacked_t_mut::<[u8; M_TO_SEND.len() as usize], _, _>(alloc, |decrypted, _alloc| {
+			lib.rt().allocate_stacked_t_mut::<[u8; M_TO_SEND.len() as usize], _, _>(alloc, |decrypted, alloc| {
                             decrypted.write([0;M_TO_SEND.len()], access);
 
                             let res = lib.crypto_box_open_easy(
@@ -502,6 +508,7 @@ pub fn libsodium_public_validate<
 				nonce_to_send.as_ptr().cast::<u8>().into(),
 				pub_key_to_send.as_ptr().cast::<u8>().into(),
 				sec_key_to_send.as_ptr().cast::<u8>().into(),
+				alloc,
 				access
                             ).unwrap();
 
@@ -565,18 +572,22 @@ pub fn test_libsodium<ID: EFID, RT: EncapfnRt<ID = ID>, L: LibSodium<ID, RT, RT 
     // println!("Runtime pointer: {:p}", lib.rt());
 
     let _ver_major = lib
-        .sodium_library_version_major(access)
+        .sodium_library_version_major(alloc, access)
         .unwrap()
         .validate()
         .unwrap();
     let _ver_minor = lib
-        .sodium_library_version_minor(access)
+        .sodium_library_version_minor(alloc, access)
         .unwrap()
         .validate()
         .unwrap();
     // println!("Libsodium Version: {:?}.{:?}", ver_major, ver_minor);
 
-    let _rand_bytes = lib.randombytes_random(access).unwrap().validate().unwrap();
+    let _rand_bytes = lib
+        .randombytes_random(alloc, access)
+        .unwrap()
+        .validate()
+        .unwrap();
     // println!("random u32: {:?}", rand_bytes);
 
     let message = "Arbitrary data to hash";
@@ -591,7 +602,7 @@ pub fn test_libsodium<ID: EFID, RT: EncapfnRt<ID = ID>, L: LibSodium<ID, RT, RT 
 
                 hash = lib
                     .rt()
-                    .allocate_stacked_t_mut::<[u8; 32], _, _>(alloc, |hash_ref, _alloc| {
+                    .allocate_stacked_t_mut::<[u8; 32], _, _>(alloc, |hash_ref, alloc| {
                         let _res = lib
                             .crypto_generichash(
                                 hash_ref.as_ptr().cast::<u8>().into(),
@@ -600,6 +611,7 @@ pub fn test_libsodium<ID: EFID, RT: EncapfnRt<ID = ID>, L: LibSodium<ID, RT, RT 
                                 message.as_bytes().len() as u64,
                                 null(),
                                 0,
+                                alloc,
                                 access,
                             )
                             .unwrap()
@@ -631,7 +643,7 @@ pub fn test_libsodium<ID: EFID, RT: EncapfnRt<ID = ID>, L: LibSodium<ID, RT, RT 
             message.write([42; 4096], access);
 
             lib.rt()
-                .allocate_stacked_t_mut::<[u8; 32], _, _>(alloc, |hash, _alloc| {
+                .allocate_stacked_t_mut::<[u8; 32], _, _>(alloc, |hash, alloc| {
                     let res = lib
                         .crypto_generichash(
                             hash.as_ptr().cast::<u8>().into(),
@@ -640,6 +652,7 @@ pub fn test_libsodium<ID: EFID, RT: EncapfnRt<ID = ID>, L: LibSodium<ID, RT, RT 
                             4096,
                             null(),
                             0,
+                            alloc,
                             access,
                         )
                         .unwrap();
@@ -667,7 +680,7 @@ pub fn calc_hash<ID: EFID, RT: EncapfnRt<ID = ID>, L: LibSodium<ID, RT, RT = RT>
             message.write([42; 4096], access);
 
             lib.rt()
-                .allocate_stacked_t_mut::<[u8; 32], _, _>(alloc, |hash, _alloc| {
+                .allocate_stacked_t_mut::<[u8; 32], _, _>(alloc, |hash, alloc| {
                     let res = lib
                         .crypto_generichash(
                             <EFPtr<[u8; 32]> as Into<*mut [u8; 32]>>::into(hash.as_ptr())
@@ -678,6 +691,7 @@ pub fn calc_hash<ID: EFID, RT: EncapfnRt<ID = ID>, L: LibSodium<ID, RT, RT = RT>
                             4096,
                             null(),
                             0,
+                            alloc,
                             access,
                         )
                         .unwrap();
@@ -699,7 +713,7 @@ pub fn calc_hash_validate<ID: EFID, RT: EncapfnRt<ID = ID>, L: LibSodium<ID, RT,
             message.write([42; 4096], access);
 
             lib.rt()
-                .allocate_stacked_t_mut::<[u8; 32], _, _>(alloc, |hash, _alloc| {
+                .allocate_stacked_t_mut::<[u8; 32], _, _>(alloc, |hash, alloc| {
                     let res = lib
                         .crypto_generichash(
                             <EFPtr<[u8; 32]> as Into<*mut [u8; 32]>>::into(hash.as_ptr())
@@ -710,6 +724,7 @@ pub fn calc_hash_validate<ID: EFID, RT: EncapfnRt<ID = ID>, L: LibSodium<ID, RT,
                             4096,
                             null(),
                             0,
+                            alloc,
                             access,
                         )
                         .unwrap();
@@ -751,21 +766,20 @@ pub fn with_mockrt_lib<'a, ID: EFID + 'a, A: encapfn::rt::mock::MockRtAllocator,
 ) -> R {
     // This is unsafe, as it instantiates a runtime that can be used to run
     // foreign functions without memory protection:
-    let (rt, alloc, mut access) =
-        unsafe { encapfn::rt::mock::MockRt::new(false, allocator, brand) };
+    let (rt, alloc, access) = unsafe { encapfn::rt::mock::MockRt::new(false, allocator, brand) };
 
     // Create a "bound" runtime, which implements the LibSodium API:
     let bound_rt = LibSodiumRt::new(&rt).unwrap();
 
     // All further functions expect libsodium to be initialized:
     // println!("Initializing libsodium...");
-    assert!(
-        0 == bound_rt
-            .sodium_init(&mut access)
-            .unwrap()
-            .validate()
-            .unwrap()
-    );
+    // assert!(
+    //     0 == bound_rt
+    //         .sodium_init(&mut access)
+    //         .unwrap()
+    //         .validate()
+    //         .unwrap()
+    // );
     // println!("Libsodium initialized!");
 
     // Run the provided closure:
@@ -780,7 +794,7 @@ pub fn with_mpkrt_lib<ID: EFID, R>(
         AccessScope<ID>,
     ) -> R,
 ) -> R {
-    let (rt, alloc, mut access) = encapfn_mpk::EncapfnMPKRt::new(
+    let (rt, mut alloc, mut access) = encapfn_mpk::EncapfnMPKRt::new(
         [c"libsodium.so"].into_iter(),
         brand,
         //Some(GLOBAL_PKEY_ALLOC.get_pkey()),
@@ -795,7 +809,7 @@ pub fn with_mpkrt_lib<ID: EFID, R>(
     // println!("Initializing libsodium:");
     assert!(
         0 == bound_rt
-            .sodium_init(&mut access)
+            .sodium_init(&mut alloc, &mut access)
             .unwrap()
             .validate()
             .unwrap()

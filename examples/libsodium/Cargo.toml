@@ -13,7 +13,9 @@ name = "ef_libsodium"
 bindgen.workspace = true
 
 [dev-dependencies]
-criterion = "0.5.1"
+criterion = { version = "0.5.1", default-features = false }
+rand = { version = "0.8.5", default-features = false, features = ["small_rng"] }
+sandcrust = { git = "https://github.com/atopia/sandcrust", rev = "0de40c50ebf8b6253dbf953c6e9e4498b1670c90" }
 
 [dependencies]
 encapfn.workspace = true
@@ -26,3 +28,6 @@ env_logger = "0.11.3"
 name = "criterion"
 harness = false
 
+[[bench]]
+name = "sodium_hash_comparison"
+harness = false

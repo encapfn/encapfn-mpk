@@ -534,135 +534,58 @@ pub fn libsodium_public_validate<
     // println!("Decrypted: {}", s);
 }
 
-pub fn test_libsodium_unsafe() {
-    let _hash: EFCopy<[u8; 32]> = EFCopy::zeroed();
-
-    let _ver_major = unsafe { sodium_library_version_major() };
-    let _ver_minor = unsafe { sodium_library_version_minor() };
-
-    // println!("Libsodium Version: {:?}.{:?}", ver_major, ver_minor);
-
-    let _rand_bytes = unsafe { randombytes_random() };
-    // println!("random u32: {:?}", rand_bytes);
-
-    let message = "Arbitrary data to hash";
-
+pub fn libsodium_hash_unsafe(message: &[u8]) -> [u8; 32] {
     let hash = [0 as u8; 32];
-    unsafe {
+    let res = unsafe {
         crypto_generichash(
             hash.as_ptr() as *mut u8,
             32,
             message.as_ptr() as *const u8,
-            message.as_bytes().len() as u64,
+            message.len() as u64,
             null(),
             0,
         )
     };
+
+    assert!(res == 0);
+
+    hash
 }
 
 // The signature of this is quite ugly. Unfortunately I haven't found a way to
 // make it nicer without things breaking:
-pub fn test_libsodium<ID: EFID, RT: EncapfnRt<ID = ID>, L: LibSodium<ID, RT, RT = RT>>(
+pub fn libsodium_hash_ef<ID: EFID, RT: EncapfnRt<ID = ID>, L: LibSodium<ID, RT, RT = RT>>(
     lib: &L,
     alloc: &mut AllocScope<RT::AllocTracker<'_>, RT::ID>,
     access: &mut AccessScope<RT::ID>,
+    message: &[u8],
+    result_cb: impl FnOnce(&[u8]),
 ) {
-    let mut hash: EFCopy<[u8; 32]> = EFCopy::zeroed();
-
-    // println!("Runtime pointer: {:p}", lib.rt());
-
-    let _ver_major = lib
-        .sodium_library_version_major(alloc, access)
-        .unwrap()
-        .validate()
-        .unwrap();
-    let _ver_minor = lib
-        .sodium_library_version_minor(alloc, access)
-        .unwrap()
-        .validate()
-        .unwrap();
-    // println!("Libsodium Version: {:?}.{:?}", ver_major, ver_minor);
-
-    let _rand_bytes = lib
-        .randombytes_random(alloc, access)
-        .unwrap()
-        .validate()
-        .unwrap();
-    // println!("random u32: {:?}", rand_bytes);
-
-    let message = "Arbitrary data to hash";
-
     lib.rt()
-        .allocate_stacked_slice_mut::<u8, _, _>(
-            message.as_bytes().len(),
-            alloc,
-            |message_ref, alloc| {
-                // Initialize the EFAllocation into an EFMutVal:
-                message_ref.copy_from_slice(message.as_bytes(), access);
-
-                hash = lib
-                    .rt()
-                    .allocate_stacked_t_mut::<[u8; 32], _, _>(alloc, |hash_ref, alloc| {
-                        let _res = lib
-                            .crypto_generichash(
-                                hash_ref.as_ptr().cast::<u8>().into(),
-                                32,
-                                message_ref.as_ptr().into(),
-                                message.as_bytes().len() as u64,
-                                null(),
-                                0,
-                                alloc,
-                                access,
-                            )
-                            .unwrap()
-                            .validate()
-                            .unwrap();
-
-                        // println!(
-                        //     "hash res: {:?}, output (it uses Blake2b-256): {:x?}",
-                        //     res,
-                        //     hash_ref.validate(access).as_deref(),
-                        // );
-
-                        hash_ref.copy(access)
-                    })
-                    .unwrap();
-            },
-        )
-        .unwrap();
-
-    // println!(
-    //     "test output (it uses Blake2b-256): {:x?}",
-    //     hash.validate().unwrap(),
-    // );
-
-    lib.rt()
-        .allocate_stacked_t_mut::<[u8; 4096], _, _>(alloc, |message, alloc| {
+        .allocate_stacked_slice_mut::<u8, _, _>(message.len(), alloc, |message_ref, alloc| {
             // Initialize the EFAllocation into an EFMutVal:
-
-            message.write([42; 4096], access);
+            message_ref.copy_from_slice(message, access);
 
             lib.rt()
-                .allocate_stacked_t_mut::<[u8; 32], _, _>(alloc, |hash, alloc| {
+                .allocate_stacked_t_mut::<[u8; 32], _, _>(alloc, |hash_ref, alloc| {
                     let res = lib
                         .crypto_generichash(
-                            hash.as_ptr().cast::<u8>().into(),
+                            hash_ref.as_ptr().cast::<u8>().into(),
                             32,
-                            message.as_ptr().cast::<u8>().into(),
-                            4096,
+                            message_ref.as_ptr().into(),
+                            message.len() as u64,
                             null(),
                             0,
                             alloc,
                             access,
                         )
+                        .unwrap()
+                        .validate()
                         .unwrap();
 
-                    // println!(
-                    //     "hash res: {:?}, output (it uses Blake2b-256): {:x?}",
-                    //     res,
-                    //     hash.validate(access).as_deref(),
-                    // );
-                    assert!(res.validate().unwrap() == 0);
+                    assert!(res == 0);
+
+                    result_cb(&*hash_ref.validate(&access).unwrap())
                 })
                 .unwrap();
         })

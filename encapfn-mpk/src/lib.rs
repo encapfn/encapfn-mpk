@@ -19,8 +19,9 @@ use std::ops::Range;
 use std::os::fd::AsRawFd;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::Mutex;
 
-use log::{debug, info};
+use log::{debug, info, log_enabled, trace, warn};
 
 use encapfn::abi::calling_convention::{Stacked, AREG0, AREG1, AREG2, AREG3, AREG4, AREG5};
 use encapfn::abi::sysv_amd64::SysVAMD64ABI;
@@ -77,6 +78,7 @@ static ENCAPFN_MPK_LOADER_STUB: &'static [u8] =
 struct RustThreadState {
     runtime: *const (),
     pkru_shadow: u32,
+    initialized: bool,
 }
 
 const _: () = assert!(std::mem::align_of::<RustThreadState>() == PAGE_SIZE);
@@ -87,14 +89,138 @@ impl RustThreadState {
         RustThreadState {
             runtime: std::ptr::null(),
             pkru_shadow: 0,
+            initialized: false,
         }
     }
 }
 
 // TODO: figure out how to make this actually thread-local, in a way that
 // foreign code cannot break
-//#[thread_local]
+#[thread_local]
 static mut RUST_THREAD_STATE: RustThreadState = RustThreadState::new();
+
+// Can't use a pointer here, as that's not Send... :/
+static PROTECTED_ADDRS: Mutex<Vec<usize>> = Mutex::new(vec![]);
+
+unsafe fn pkey_mprotect(
+    log_prefix: &str,
+    addr: *mut std::ffi::c_void,
+    len: usize,
+    prot: std::ffi::c_int,
+    pkey: std::ffi::c_int,
+    annotation: impl FnOnce() -> Cow<'static, str>,
+) {
+    let mut protected_addrs = PROTECTED_ADDRS.lock().unwrap();
+
+    if protected_addrs.iter().any(|paddr| *paddr == addr as usize) {
+        warn!(
+	    "{} DROPPING pkey_mprotect({:p}, {}, {}, pkey = {}), already protected! (requested purpose: {})",
+	    log_prefix,
+	    addr,
+	    len,
+	    prot,
+	    pkey,
+	    annotation(),
+	);
+        return;
+    }
+
+    assert!(
+        0 == unsafe { libc_bindings::sys_mman::pkey_mprotect(addr, len, prot, pkey,) },
+        "{} Failed to pkey_mprotect pages at {:p} for {:x?} bytes with prot {:x} and pkey {}",
+        log_prefix,
+        addr,
+        len,
+        prot,
+        pkey,
+    );
+
+    if log_enabled!(log::Level::Trace) {
+        trace!(
+            "{} pkey_mprotect({:p}, {}, {}, pkey = {}) // {}",
+            log_prefix,
+            addr,
+            len,
+            prot,
+            pkey,
+            annotation(),
+        );
+    }
+
+    protected_addrs.push(addr as usize);
+}
+
+unsafe fn initialize_rust_thread_state() {
+    if !RUST_THREAD_STATE.initialized {
+        let global_pkeys = get_global_pkeys();
+
+        pkey_mprotect(
+            "GLOBAL",
+            std::ptr::addr_of_mut!(RUST_THREAD_STATE) as *mut std::ffi::c_void,
+            std::mem::size_of::<RustThreadState>(),
+            (libc_bindings::sys_mman::PROT_READ | libc_bindings::sys_mman::PROT_WRITE)
+                as std::ffi::c_int,
+            global_pkeys.ro,
+            || "RUST_THREAD_STATE".into(),
+        );
+
+        RUST_THREAD_STATE.initialized = true;
+    }
+}
+
+#[derive(Copy, Clone, Debug)]
+struct GlobalPkeys {
+    rw: std::ffi::c_int,
+    ro: std::ffi::c_int,
+}
+
+static GLOBAL_PKEYS: Mutex<Option<GlobalPkeys>> = Mutex::new(None);
+fn get_global_pkeys() -> GlobalPkeys {
+    let mut lg = GLOBAL_PKEYS.lock().unwrap();
+
+    if let Some(global_pkeys) = *lg {
+        global_pkeys
+    } else {
+        let pkey_global_ro = unsafe {
+            libc_bindings::sys_mman::pkey_alloc(
+                // Reserved flags argument, must be zero:
+                0,
+                // Default permissions set into PKRU for this pkey. Allow all
+                // accesses while in Rust:
+                0,
+            )
+        };
+
+        if pkey_global_ro <= 0 {
+            panic!("Failed to allocate global R-O pkey: {}", pkey_global_ro);
+        }
+
+        let pkey_global_rw = unsafe {
+            libc_bindings::sys_mman::pkey_alloc(
+                // Reserved flags argument, must be zero:
+                0,
+                // Default permissions set into PKRU for this pkey. Allow all
+                // accesses while in Rust:
+                0,
+            )
+        };
+
+        if pkey_global_rw <= 0 {
+            panic!("Failed to allocate global R/W pkey: {}", pkey_global_rw);
+        }
+
+        let global_pkeys = GlobalPkeys {
+            rw: pkey_global_rw,
+            ro: pkey_global_ro,
+        };
+        info!("Allocated global PKEYs: {:?}", global_pkeys);
+
+        *lg = Some(global_pkeys);
+        global_pkeys
+    }
+}
+
+static DL_LOCK: Mutex<()> = Mutex::new(());
 
 fn get_dlerror() -> Option<&'static std::ffi::CStr> {
     // Try to retrieve an error description from dlerror(), if one is available:
@@ -152,9 +278,12 @@ impl MemMapEntry {
 }
 
 fn parse_proc_self_maps() -> Vec<MemMapEntry> {
-    std::fs::read_to_string("/proc/self/maps")
-        .unwrap()
-        .trim()
+    let maps = std::fs::read_to_string("/proc/self/maps").unwrap();
+    debug!(
+        "Maps:\n{}",
+        std::fs::read_to_string("/proc/self/maps").unwrap()
+    );
+    maps.trim()
         .lines()
         .map(|line| {
             fn perm_set(perm: &str, expected: &str, permissible: &[&str]) -> bool {
@@ -400,9 +529,6 @@ pub struct EncapfnMPKRt<ID: EFID> {
     // Pkey assigned to this library's mutable state:
     pkey_library: std::ffi::c_int,
 
-    // Pkey assigned to pages that are exposed read-only to this library:
-    pkey_library_ro: std::ffi::c_int,
-
     // If we have one, pkey assigned to pages allocated to Rust:
     pkey_rust: Option<std::ffi::c_int>,
 
@@ -423,6 +549,9 @@ pub struct EncapfnMPKRt<ID: EFID> {
     _not_sync: PhantomData<*const ()>,
 }
 
+unsafe impl<ID: EFID> Send for EncapfnMPKRt<ID> {}
+unsafe impl<ID: EFID> Sync for EncapfnMPKRt<ID> {} // TODO: remove!
+
 impl<ID: EFID> EncapfnMPKRt<ID> {
     // TODO: mark unsafe
     pub fn new<N: AsRef<CStr>>(
@@ -435,6 +564,10 @@ impl<ID: EFID> EncapfnMPKRt<ID> {
         AllocScope<'static, EncapfnMPKRtAllocTracker, ID>,
         AccessScope<ID>,
     ) {
+        // Right now, we just acquire the DL_LOCK for the entire
+        // constructor:
+        let _dl_lock_guard = DL_LOCK.lock().unwrap();
+
         // See the EncapfnMPKRt type definition for an explanation of this
         // const assertion. It is required to allow us to index into fields
         // of the nested `EncapfnMPKRtAsmState` struct from within assembly.
@@ -448,10 +581,48 @@ impl<ID: EFID> EncapfnMPKRt<ID> {
         info!("Initializing new EncapfnMPKRt instance, id {}", id);
         let log_prefix = format!("EncapfnMPKRt[#{}]:", id);
 
+        // ---------------------------------------------------------------------
+        // Debug information for reasoning about the address of thread local
+        // state. The addresses retrieved by Rust and through our assembly
+        // should always match up:
+        let rust_thread_state_addr = core::ptr::addr_of_mut!(RUST_THREAD_STATE);
+        let asm_thread_state_addr: usize;
+        unsafe {
+            std::arch::asm!(
+            "mov %fs:0, {out_reg}",
+            "leaq {rts_sym}@TPOFF({out_reg}), {out_reg}",
+            options(att_syntax),
+            rts_sym = sym RUST_THREAD_STATE,
+            out_reg = out(reg) asm_thread_state_addr,
+            );
+        }
+        debug!(
+            "{} Rust thread local: {:p}",
+            log_prefix, rust_thread_state_addr
+        );
+        debug!(
+            "{} ASM thread local:  {:p}",
+            log_prefix, asm_thread_state_addr as *mut ()
+        );
+        // ---------------------------------------------------------------------
+
         // Create a map to track assigned memory regions protection keys for
         // debug output:
         let mut pkey_regions: HashMap<std::ffi::c_int, Vec<(Range<*mut ()>, Cow<'static, str>)>> =
             HashMap::new();
+
+        if let Some(pkey_rust) = pkey_rust {
+            pkey_regions.insert(pkey_rust, vec![]);
+        }
+
+        // Get a hold of the global PKEYs:
+        let global_pkeys = get_global_pkeys();
+        pkey_regions.insert(global_pkeys.ro, vec![]);
+        pkey_regions.insert(global_pkeys.rw, vec![]);
+        debug!(
+            "{} Allocated MPK PKEYs for global memory regions: R-O {}, R/W {}",
+            log_prefix, global_pkeys.ro, global_pkeys.rw,
+        );
 
         // Acquire a PKEY for this library. If this system call does not work,
         // it either means that we have exhausted the PKEYs for this process
@@ -475,49 +646,9 @@ impl<ID: EFID> EncapfnMPKRt<ID> {
             log_prefix, pkey_library
         );
 
-        // Acquire another PKEY, for state that should be exposed read-only to
-        // the foreign library.
-        let pkey_library_ro = unsafe {
-            libc_bindings::sys_mman::pkey_alloc(
-                // Reserved flags argument, must be zero:
-                0,
-                // Default permissions set into PKRU for this pkey. Allow all
-                // accesses while in Rust:
-                0,
-            )
-        };
-        if pkey_library_ro <= 0 {
-            panic!("Failed to allocate a pkey: {}", pkey_library_ro);
-        }
-        pkey_regions.insert(pkey_library_ro, vec![]);
-        debug!(
-            "{} Allocated MPK PKEY for R-O foreign library memory regions: {}",
-            log_prefix, pkey_library_ro
-        );
-
-        // Acquire another PKEY, for state that should be exposed read-only to
-        // all foreign libraries (TODO: share this with other instances)
-        let pkey_global_ro = unsafe {
-            libc_bindings::sys_mman::pkey_alloc(
-                // Reserved flags argument, must be zero:
-                0,
-                // Default permissions set into PKRU for this pkey. Allow all
-                // accesses while in Rust:
-                0,
-            )
-        };
-        if pkey_global_ro <= 0 {
-            panic!("Failed to allocate a pkey: {}", pkey_global_ro);
-        }
-        pkey_regions.insert(pkey_global_ro, vec![]);
-        debug!(
-            "{} Allocated MPK PKEY for R-O global memory regions: {}",
-            log_prefix, pkey_global_ro
-        );
-
         // Calculate the PKRU value that we should load while this library is
-        // executing. We should allow all accesses to the pkey_library, and
-        // only reads to the pkey_library_ro key:
+        // executing. We should allow all accesses to the `pkey_library` and
+        // `global_pkeys.rw` keys.
         const ALLOW_ALL: u32 = 0b11;
         const WD: u32 = 0b01;
         const AD_WD: u32 = 0b00;
@@ -529,13 +660,16 @@ impl<ID: EFID> EncapfnMPKRt<ID> {
         };
 
         let foreign_code_pkru: u32 = default_key_perm
-            & !(WD << (pkey_library_ro * 2))
-            & !(WD << (pkey_global_ro * 2))
-            & !(ALLOW_ALL << (pkey_library * 2));
+            & !(ALLOW_ALL << (pkey_library * 2))
+            & !(WD << (global_pkeys.ro * 2))
+            & !(ALLOW_ALL << (global_pkeys.rw * 2));
+
+        // panic!("Foreign code PKRU: {:x?} {:x?} {} {} {} {:?}", default_key_perm, foreign_code_pkru, pkey_library, global_pkeys.ro, global_pkeys.rw, default_key_perm;
+        //     & !(ALLOW_ALL << (pkey_library * 2)));
 
         debug!(
-            "{} Calculated foreign code PKRU register as: {:08x}",
-            log_prefix, foreign_code_pkru
+            "{} Calculated foreign code PKRU register as: {:08x} / {:032b}",
+            log_prefix, foreign_code_pkru, foreign_code_pkru
         );
 
         enum MemfdOrTempfile {
@@ -673,20 +807,17 @@ impl<ID: EFID> EncapfnMPKRt<ID> {
         let foreign_stack_top = unsafe { foreign_stack_bottom.byte_add(STACK_SIZE) };
 
         // Make the stack accessible to pkey_library:
-        assert!(
-            0 == unsafe {
-                libc_bindings::sys_mman::pkey_mprotect(
-                    foreign_stack_bottom as *mut std::ffi::c_void,
-                    STACK_SIZE,
-                    (libc_bindings::sys_mman::PROT_READ | libc_bindings::sys_mman::PROT_WRITE)
-                        as std::ffi::c_int,
-                    pkey_library,
-                )
-            },
-            "Failed to pkey_mprotect foreign stack at {:p} for {:x?} bytes",
-            foreign_stack_bottom as *mut std::ffi::c_void,
-            STACK_SIZE,
-        );
+        unsafe {
+            pkey_mprotect(
+                &log_prefix,
+                foreign_stack_bottom as *mut std::ffi::c_void,
+                STACK_SIZE,
+                (libc_bindings::sys_mman::PROT_READ | libc_bindings::sys_mman::PROT_WRITE)
+                    as std::ffi::c_int,
+                pkey_library,
+                || "Foreign Stack".into(),
+            );
+        }
         pkey_regions.get_mut(&pkey_library).unwrap().push((
             Range {
                 start: foreign_stack_bottom,
@@ -734,18 +865,14 @@ impl<ID: EFID> EncapfnMPKRt<ID> {
         }
         let foreign_heap_end = unsafe { foreign_heap_start.byte_add(foreign_heap_size) };
 
-        let res = unsafe {
-            libc_bindings::sys_mman::pkey_mprotect(
+        unsafe {
+            pkey_mprotect(
+                &log_prefix,
                 foreign_heap_start as *mut _,
                 foreign_heap_size,
                 (libc_bindings::sys_mman::PROT_READ | libc_bindings::sys_mman::PROT_WRITE) as i32,
                 pkey_library,
-            )
-        };
-        if res != 0 {
-            panic!(
-                "Failed performing pkey_mprotect for allocated memory at {:p} for {:x?} bytes",
-                foreign_heap_start as *mut _, foreign_heap_size,
+                || "Foreign Heap".into(),
             );
         }
         pkey_regions.get_mut(&pkey_library).unwrap().push((
@@ -789,6 +916,12 @@ impl<ID: EFID> EncapfnMPKRt<ID> {
 
         extern "C" {
             static environ: *const *const std::ffi::c_char;
+        }
+
+        // Ensure that the `RUST_THREAD_STATE` is initialized on our
+        // current thread:
+        unsafe {
+            initialize_rust_thread_state();
         }
 
         let mut res = <Self as SysVAMD64BaseRt>::InvokeRes::<()>::new();
@@ -917,6 +1050,7 @@ impl<ID: EFID> EncapfnMPKRt<ID> {
         let loader_fd_cpath = CString::new(loader_file_path.as_os_str().as_encoded_bytes())
             .expect("Unexpected null-terminator in memfd path");
 
+        debug!("{} About to dlmopen the library!", asm_state.log_prefix);
         // TODO: document!
         let loader_lib_handle = unsafe {
             libc_bindings::dlfcn::dlmopen(
@@ -927,6 +1061,7 @@ impl<ID: EFID> EncapfnMPKRt<ID> {
                     | libc_bindings::dlfcn::RTLD_DEEPBIND as std::os::raw::c_int,
             )
         };
+        debug!("{} dlmopened the library!", asm_state.log_prefix);
 
         // Check whether the library was correctly loaded, otherwise print error
         // and exit:
@@ -989,19 +1124,26 @@ impl<ID: EFID> EncapfnMPKRt<ID> {
         // pkey as allocated above:
         for library in match_link_map_mem_map_regions(&mut rt_lm_entries_exclusive, &mut mmaps) {
             for region in library.mem_map_entries {
-                assert!(
-                    0 == unsafe {
-                        libc_bindings::sys_mman::pkey_mprotect(
-                            region.start as *mut _,
-                            region.end as usize - region.start as usize,
-                            region.as_mprotect_prot(),
-                            pkey_library,
-                        )
-                    },
-                    "Failed performing pkey_mprotect for library {:?}, region {:?}",
-                    &library.link_map_entry,
-                    region,
-                );
+                // if (*rust_thread_state_addrs).iter().any(|addr| *addr == region.start as usize) {
+                //     continue;
+                // }
+
+                unsafe {
+                    pkey_mprotect(
+                        &asm_state.log_prefix,
+                        region.start as *mut _,
+                        region.end as usize - region.start as usize,
+                        region.as_mprotect_prot(),
+                        pkey_library,
+                        || {
+                            format!(
+                                "library {:?}, region [{:p}, {:p})",
+                                &library.link_map_entry, region.start, region.end
+                            )
+                            .into()
+                        },
+                    );
+                }
                 pkey_regions.get_mut(&pkey_library).unwrap().push((
                     Range {
                         start: region.start as *mut _,
@@ -1019,7 +1161,7 @@ impl<ID: EFID> EncapfnMPKRt<ID> {
         // this security hole open and provide access to the ld library for
         // foreign code:
         let mut main_program_lm_entries_exclusive = main_program_lm_entries
-            .clone() // TODO: remove clone when pkey_global_ro is removed
+            .clone() // TODO: remove clone when pkeys_global.ro is removed
             .into_iter()
             .filter(|entry| {
                 !rt_lm_entries
@@ -1035,20 +1177,23 @@ impl<ID: EFID> EncapfnMPKRt<ID> {
                 match_link_map_mem_map_regions(&mut main_program_lm_entries_exclusive, &mut mmaps)
             {
                 for region in library.mem_map_entries {
-                    assert!(
-                        0 == unsafe {
-                            libc_bindings::sys_mman::pkey_mprotect(
-                                region.start as *mut _,
-                                region.end as usize - region.start as usize,
-                                region.as_mprotect_prot(),
-                                pkey_main_program,
-                            )
+                    unsafe {
+                        pkey_mprotect(
+                            &asm_state.log_prefix,
+                            region.start as *mut _,
+                            region.end as usize - region.start as usize,
+                            region.as_mprotect_prot(),
+                            pkey_main_program,
+                            || "Main Program Link Map Entry".into(),
+                        );
+                    }
+                    pkey_regions.get_mut(&pkey_main_program).unwrap().push((
+                        Range {
+                            start: region.start as *mut _,
+                            end: region.end as *mut _,
                         },
-                        "Failed performing pkey_mprotect for library {:?}, region {:?}",
-                        &library.link_map_entry,
-                        region
-                    );
-                    unimplemented!("Add memory region to pkey_regions");
+                        Cow::Owned(format!("Main Program {:?}", library.link_map_entry.name)),
+                    ));
                 }
             }
         }
@@ -1058,7 +1203,7 @@ impl<ID: EFID> EncapfnMPKRt<ID> {
         // Answer: it does (at least many functions do)! Thus incorporate this proper!
         //
         // For this, determine all shared libraries between the two namespaces
-        // and assign them to the pkey_global_ro:
+        // and assign them to the global_pkeys.ro:
         let mut lm_entries_shared = main_program_lm_entries
             .into_iter()
             .filter(|entry| {
@@ -1071,20 +1216,23 @@ impl<ID: EFID> EncapfnMPKRt<ID> {
 
         for library in match_link_map_mem_map_regions(&mut lm_entries_shared, &mut mmaps) {
             for region in library.mem_map_entries {
-                assert!(
-                    0 == unsafe {
-                        libc_bindings::sys_mman::pkey_mprotect(
-                            region.start as *mut _,
-                            region.end as usize - region.start as usize,
-                            region.as_mprotect_prot(),
-                            pkey_global_ro,
-                        )
-                    },
-                    "Failed performing pkey_mprotect for library {:?}, region {:?}",
-                    &library.link_map_entry,
-                    region
-                );
-                pkey_regions.get_mut(&pkey_global_ro).unwrap().push((
+                unsafe {
+                    pkey_mprotect(
+                        &asm_state.log_prefix,
+                        region.start as *mut _,
+                        region.end as usize - region.start as usize,
+                        region.as_mprotect_prot(),
+                        global_pkeys.ro,
+                        || {
+                            format!(
+                                "global ro library {:?}, region [{:p}, {:p})",
+                                &library.link_map_entry, region.start, region.end
+                            )
+                            .into()
+                        },
+                    );
+                }
+                pkey_regions.get_mut(&global_pkeys.ro).unwrap().push((
                     Range {
                         start: region.start as *mut _,
                         end: region.end as *mut _,
@@ -1094,54 +1242,27 @@ impl<ID: EFID> EncapfnMPKRt<ID> {
             }
         }
 
-        // Make sure that the library_ro pkey is assigned to all required
+        // Make sure that the global_ro pkey is assigned to all required
         // read-only pages. (Rust will still have read/write access!)
         assert!(std::ptr::addr_of_mut!(RUST_THREAD_STATE) as usize % PAGE_SIZE == 0);
         assert!(std::mem::size_of::<RustThreadState>() == 4096);
-        assert!(
-            0 == unsafe {
-                libc_bindings::sys_mman::pkey_mprotect(
-                    std::ptr::addr_of_mut!(RUST_THREAD_STATE) as *mut std::ffi::c_void,
-                    std::mem::size_of::<RustThreadState>(),
-                    (libc_bindings::sys_mman::PROT_READ | libc_bindings::sys_mman::PROT_WRITE)
-                        as std::ffi::c_int,
-                    pkey_library_ro,
-                )
-            },
-            "Failed to pkey_mprotect read-only pages at {:p} for {:x?} bytes",
-            std::ptr::addr_of_mut!(RUST_THREAD_STATE) as *mut std::ffi::c_void,
-            std::mem::size_of::<RustThreadState>(),
-        );
-        pkey_regions.get_mut(&pkey_library_ro).unwrap().push((
-            Range {
-                start: std::ptr::addr_of_mut!(RUST_THREAD_STATE) as *mut (),
-                end: unsafe {
-                    (std::ptr::addr_of_mut!(RUST_THREAD_STATE) as *mut ())
-                        .byte_add(std::mem::size_of::<RustThreadState>())
-                },
-            },
-            Cow::Borrowed("Rust Thread State"),
-        ));
 
         // We need to support vDSOs. Enable R/W on that memory region. TODO: this is problematic!
         if let Some(vdso_region) = mmaps
             .iter()
             .find(|m| m.pathname.as_ref().map(|p| p == "[vdso]").unwrap_or(false))
         {
-            assert!(
-                0 == unsafe {
-                    libc_bindings::sys_mman::pkey_mprotect(
-                        vdso_region.start as *mut _,
-                        vdso_region.end as usize - vdso_region.start as usize,
-                        vdso_region.as_mprotect_prot(),
-                        pkey_library,
-                    )
-                },
-                "Failed to pkey_mprotect read-write vDSO pages at {:p} for {:x?} bytes",
-                vdso_region.start,
-                vdso_region.end as usize - vdso_region.start as usize,
-            );
-            pkey_regions.get_mut(&pkey_library).unwrap().push((
+            unsafe {
+                pkey_mprotect(
+                    &asm_state.log_prefix,
+                    vdso_region.start as *mut _,
+                    vdso_region.end as usize - vdso_region.start as usize,
+                    vdso_region.as_mprotect_prot(),
+                    global_pkeys.rw,
+                    || "vDSO".into(),
+                )
+            };
+            pkey_regions.get_mut(&global_pkeys.rw).unwrap().push((
                 Range {
                     start: vdso_region.start as *mut (),
                     end: vdso_region.end as *mut (),
@@ -1150,7 +1271,10 @@ impl<ID: EFID> EncapfnMPKRt<ID> {
             ));
         }
 
-        debug!("Assigned PKEYs to memory regions: {:#?}", pkey_regions);
+        debug!(
+            "{} Assigned PKEYs to memory regions: {:#?}",
+            asm_state.log_prefix, pkey_regions
+        );
 
         let rt = EncapfnMPKRt {
             asm_state,
@@ -1159,16 +1283,10 @@ impl<ID: EFID> EncapfnMPKRt<ID> {
             rt_lmid,
             lib_handles,
             pkey_library,
-            pkey_library_ro,
             pkey_rust,
             _id: PhantomData,
             _not_sync: PhantomData,
         };
-
-        debug!(
-            "Maps:\n{}",
-            std::fs::read_to_string("/proc/self/maps").unwrap()
-        );
 
         // Drop file descriptors to memfd's after the library is fully
         // loaded. Otherwise it may be possible that the memfd gets reclaimed
@@ -1179,6 +1297,7 @@ impl<ID: EFID> EncapfnMPKRt<ID> {
             std::mem::drop(rt_file);
         }
 
+        debug!("{} Runtime initialized!", rt.asm_state.log_prefix);
         (
             rt,
             unsafe {
@@ -1297,17 +1416,19 @@ impl<ID: EFID> EncapfnMPKRt<ID> {
                 // Now, load the runtime pointer again and restore the Rust stack.
                 // We load the runtime pointer into a callee-saved register that,
                 // by convention, is reserved by all callback invocations:
-                mov rdi, qword ptr [rip - {rust_thread_state_static} + {rts_runtime_offset}]
+                //
+                // Load the runtime pointer into r10:
+                mov  r10, qword ptr fs:[{rust_thread_state_static}@TPOFF + {rts_runtime_offset}]
 
                 // Update the foreign stack pointer in our runtime struct, such
                 // that the callback handler can access it and we use it to
                 // restore the stack pointer after the callback has been run:
-                mov qword ptr [rdi + {rtas_foreign_stack_ptr_offset}], rsp
+                mov qword ptr [r10 + {rtas_foreign_stack_ptr_offset}], rsp
 
                 // Now, restore the Rust stack. We did not use the red-zone in
                 // the invoke functions, and hence can just align the stack
                 // down to 16 bytes to call the function:
-                mov rsp, qword ptr [rdi + {rtas_rust_stack_ptr_offset}]
+                mov rsp, qword ptr [r10 + {rtas_rust_stack_ptr_offset}]
                 and rsp, -16
 
                 // Push all values that we intend to retain on the Rust stack.
@@ -1315,16 +1436,16 @@ impl<ID: EFID> EncapfnMPKRt<ID> {
                 // worry about this introducing any additional clobbers.
                 //
                 // For now, we only need to save the runtime pointer:
-                push rdi               // Save rt pointer on Rust stack
+                push r10               // Save rt pointer on Rust stack
 
                 // Finally, invoke the callback handler:
                 call {callback_handler_sym}
 
                 // Restore the runtime pointer from the Rust stack:
-                pop rdi
+                pop r10
 
                 // Restore the userspace stack pointer:
-                mov rsp, qword ptr [rdi + {rtas_foreign_stack_ptr_offset}]
+                mov rsp, qword ptr [r10 + {rtas_foreign_stack_ptr_offset}]
 
                 // Now, switch back the PKEYs. For this, we need to preserve
                 // the return value registers rax and rdx. This may overflow
@@ -1335,9 +1456,10 @@ impl<ID: EFID> EncapfnMPKRt<ID> {
                 // Move the intended PKRU value into the thread-local static, such
                 // that we can compare it after we run the WRPKRU instruction.
                 // This prevents it from being used as a gadget by untrusted code.
-                mov eax, dword ptr [rdi + {rtas_foreign_code_pkru_offset}]
-                mov dword ptr [rip - {rust_thread_state_static} + {rts_pkru_shadow_offset}], eax
+                mov eax, dword ptr [r10 + {rtas_foreign_code_pkru_offset}]
+                mov dword ptr fs:[{rust_thread_state_static}@TPOFF + {rts_pkru_shadow_offset}], eax
 
+                // eax loaded above!
                 xor rcx, rcx           // Clear rcx, required for WRPKRU
                 xor rdx, rdx           // Clear rdx, required for WRPKRU
                 wrpkru
@@ -1347,16 +1469,15 @@ impl<ID: EFID> EncapfnMPKRt<ID> {
                 // is accessible read-only to foreign code, so read its PKRU shadow
                 // copy and make sure that its value matches rax.
                 //
-                // We clobber the r13 scratch register for this, which we don't
-                // need to save:
-                push r13 // TODO!
-                mov r13d, dword ptr [rip - {rust_thread_state_static} + {rts_pkru_shadow_offset}]
-                cmp eax, r13d
+                // Load the PKRU shadow copy:
+                mov  r10d, dword ptr fs:[{rust_thread_state_static}@TPOFF + {rts_pkru_shadow_offset}]
+                //
+                // Compare it against the restored value:
+                cmp eax, r10d
                 je 500f
                 ud2                    // Crash with an illegal instruction
 
              500: // _pkru_loaded_verified
-                pop r13
 
                 // Restore the callback return values:
                 pop rdx                // Pop rdx from foreign stack, still accessible
@@ -1405,20 +1526,28 @@ impl<ID: EFID> EncapfnMPKRt<ID> {
                 // - r13: amount of bytes spilled on the stack
                 // - r14: encapfn_mpk_sysv_amd64_invoke (this symbol)
                 //
+                // This function also clobbers r15 to compute the address of the
+                // RUST_THREAD_STATE thread local. Callers must save this register,
+                // in addition to r12-r14.
+                //
                 // We need to copy the stacked arguments, set the PKRU register, and
                 // finally jump to the function to execute. Upon return, we need to
                 // re-enable access to Rust memory and encode the return value in the
                 // wrapper type (TODO!).
 
                 // First, save the original Rust stack pointer (including the function
-                // call arguments). Also, save the runtime pointer into the Rust
-                // thread-local state, and the InvokeRes pointer for encoding the
-                // function's return value and any errrors:
+                // call arguments), and the invoke res into the runtime struct:
                 mov qword ptr [r10 + {rtas_rust_stack_ptr_offset}], rsp
                 mov qword ptr [r10 + {rtas_invoke_res_ptr_offset}], r12
-                mov qword ptr [rip - {rust_thread_state_static} + {rts_runtime_offset}], r10
 
-                // First, copy the stacked arguments. For this we need to:
+                // Also, save the runtime pointer into the Rust thread-local state,
+                // and the InvokeRes pointer for encoding the function's return value
+                // and any errors.
+                mov qword ptr fs:[{rust_thread_state_static}@TPOFF + {rts_runtime_offset}], r10
+                mov r14d, dword ptr [r10 + {rtas_foreign_code_pkru_offset}]
+                mov dword ptr fs:[{rust_thread_state_static}@TPOFF + {rts_pkru_shadow_offset}], r14d
+
+                // Now, copy the stacked arguments. For this we need to:
                 //
                 // 1. load the current foreign stack pointer,
                 // 2. subtract the amount of bytes occupied by stacked arguments,
@@ -1489,12 +1618,11 @@ impl<ID: EFID> EncapfnMPKRt<ID> {
                 push rcx               // Save rcx to the foreign stack
                 push rdx               // Save rdx to the foreign stack
 
-                // Move the intended PKRU value into the thread-local static, such
-                // that we can compare it after we run the WRPKRU instruction.
-                // This prevents it from being used as a gadget by untrusted code.
+                // Now, load the intended PKRU value from the runtime (r10).
+                // It was already saved into the thread local above:
                 mov eax, dword ptr [r10 + {rtas_foreign_code_pkru_offset}]
-                mov dword ptr [rip - {rust_thread_state_static} + {rts_pkru_shadow_offset}], eax
 
+                // Set the PKRU register:
                 xor rcx, rcx           // Clear rcx, required for WRPKRU
                 xor rdx, rdx           // Clear rdx, required for WRPKRU
                 wrpkru
@@ -1503,8 +1631,12 @@ impl<ID: EFID> EncapfnMPKRt<ID> {
                 // intended value into the PKRU register. The RUST_THREAD_STATE static
                 // is accessible read-only to foreign code, so read its PKRU shadow
                 // copy and make sure that its value matches rax.
-                mov r14d, dword ptr [rip - {rust_thread_state_static} + {rts_pkru_shadow_offset}]
-                cmp eax, r14d
+                //
+                // Load the PKRU shadow copy:
+                mov  ecx, dword ptr fs:[{rust_thread_state_static}@TPOFF + {rts_pkru_shadow_offset}]
+                //
+                // Compare it against the restored value:
+                cmp eax, ecx
                 je 600f
                 ud2                    // Crash with an illegal instruction
 
@@ -1541,7 +1673,9 @@ impl<ID: EFID> EncapfnMPKRt<ID> {
                 // Now, load the runtime pointer again and restore the Rust stack,
                 // leaving the return values rax and rdx (currently both pushed to
                 // foreign stack) intact.
-                mov r10, qword ptr [rip - {rust_thread_state_static} + {rts_runtime_offset}]
+                //
+                // Load the runtime pointer into r10:
+                mov  r10, qword ptr fs:[{rust_thread_state_static}@TPOFF + {rts_runtime_offset}]
 
                 // TODO: check whether the foreign stack is actually large enough to
                 // hold these 16 bytes:
@@ -1596,6 +1730,8 @@ pub struct EncapfnMPKRtAllocTracker {
     allocations: LinkedList<(*mut (), usize)>,
 }
 
+unsafe impl Send for EncapfnMPKRtAllocTracker {}
+
 unsafe impl AllocTracker for EncapfnMPKRtAllocTracker {
     fn is_valid(&self, ptr: *const (), len: usize) -> bool {
         // TODO: check all other mutable/immutable pages as well!
@@ -1620,6 +1756,8 @@ pub struct EncapfnMPKSymbolTable<const SYMTAB_SIZE: usize> {
     symbols: [*const (); SYMTAB_SIZE],
 }
 
+unsafe impl<const SYMTAB_SIZE: usize> Send for EncapfnMPKSymbolTable<SYMTAB_SIZE> {}
+
 unsafe impl<ID: EFID> EncapfnRt for EncapfnMPKRt<ID> {
     type ID = ID;
     type AllocTracker<'a> = EncapfnMPKRtAllocTracker;
@@ -1629,11 +1767,29 @@ unsafe impl<ID: EFID> EncapfnRt for EncapfnMPKRt<ID> {
     type SymbolTableState<const SYMTAB_SIZE: usize, const FIXED_OFFSET_SYMTAB_SIZE: usize> =
         EncapfnMPKSymbolTable<SYMTAB_SIZE>;
 
+    fn execute<R, F: FnOnce() -> R>(
+        &self,
+        _alloc_scope: &mut AllocScope<'_, Self::AllocTracker<'_>, Self::ID>,
+        _access_scope: &mut AccessScope<Self::ID>,
+        f: F,
+    ) -> R {
+        // Initialize `RUST_THREAD_STATE` for the current thread.
+        //
+        // SAFETY: no concurrent accesses to this static mut right now.
+        unsafe {
+            initialize_rust_thread_state();
+        }
+        f()
+    }
+
     fn resolve_symbols<const SYMTAB_SIZE: usize, const FIXED_OFFSET_SYMTAB_SIZE: usize>(
         &self,
         compact_symbol_table: &'static [&'static CStr; SYMTAB_SIZE],
         _fixed_offset_symbol_table: &'static [Option<&'static CStr>; FIXED_OFFSET_SYMTAB_SIZE],
     ) -> Option<Self::SymbolTableState<SYMTAB_SIZE, FIXED_OFFSET_SYMTAB_SIZE>> {
+        // Hold the DL_LOCK for the entire duration of this operation:
+        let _dl_lock_guard = DL_LOCK.lock().unwrap();
+
         // TODO: this might use an excessive amount of stack space:
         let mut err: bool = false;
 
@@ -1772,37 +1928,33 @@ unsafe impl<ID: EFID> EncapfnRt for EncapfnMPKRt<ID> {
         let ptr = unsafe { std::alloc::alloc(page_layout) };
 
         // Assign these pages the appropriate pkey:
-        assert!(
-            0 == unsafe {
-                libc_bindings::sys_mman::pkey_mprotect(
-                    ptr as *mut std::ffi::c_void,
-                    page_layout.size(),
-                    (libc_bindings::sys_mman::PROT_READ | libc_bindings::sys_mman::PROT_WRITE)
-                        as std::ffi::c_int,
-                    self.pkey_library,
-                )
-            },
-            "Failed to pkey_mprotect memory allocated using allocate_stacked_mut, layout {:?}",
-            page_layout,
-        );
+        unsafe {
+            pkey_mprotect(
+                &self.asm_state.log_prefix,
+                ptr as *mut std::ffi::c_void,
+                page_layout.size(),
+                (libc_bindings::sys_mman::PROT_READ | libc_bindings::sys_mman::PROT_WRITE)
+                    as std::ffi::c_int,
+                self.pkey_library,
+                || "allocate_stacked_untracked_mut:alloc".into(),
+            );
+        }
 
         // Execute the function:
         let ret = fun(ptr);
 
         // Revert the pages back to the Rust pkey, or the default pkey:
-        assert!(
-            0 == unsafe {
-                libc_bindings::sys_mman::pkey_mprotect(
-                    ptr as *mut std::ffi::c_void,
-                    page_layout.size(),
-                    (libc_bindings::sys_mman::PROT_READ | libc_bindings::sys_mman::PROT_WRITE)
-                        as std::ffi::c_int,
-                    self.pkey_rust.unwrap_or(0),
-                )
-            },
-            "Failed to pkey_mprotect memory allocated using allocate_stacked_mut, layout {:?}",
-            page_layout,
-        );
+        unsafe {
+            pkey_mprotect(
+                &self.asm_state.log_prefix,
+                ptr as *mut std::ffi::c_void,
+                page_layout.size(),
+                (libc_bindings::sys_mman::PROT_READ | libc_bindings::sys_mman::PROT_WRITE)
+                    as std::ffi::c_int,
+                self.pkey_rust.unwrap_or(0),
+                || "allocate_stacked_untracked_mut:free".into(),
+            );
+        }
 
         // We free the pointer again. There should not be any valid Rust
         // references to this memory in scope any longer, as they must have been

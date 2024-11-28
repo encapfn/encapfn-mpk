@@ -2,8 +2,8 @@ let
   # Nixpkgs revision including a missing `rust-darwin-setup.bash` script in the
   # rustup derivation:
   pinnedNixpkgsSrc = builtins.fetchTarball {
-    url = "https://github.com/lschuermann/nixpkgs/archive/95a65bf0a34045b57787676c0c10765604a7ccd7.tar.gz";
-    sha256 = "sha256:0j3pyxx6ib4vnpj875j5a5wij2vr9ks8rnywhvhd7m14y9qmpz0f";
+    url = "https://github.com/NixOS/nixpkgs/archive/3380c823c9963e39f7d90582e90ec6fb1c67b296.tar.gz";
+    sha256 = "sha256:1b4sdanbm7qa5wxsc6dwysnrsw4x4p5ygc1rxnqfx0pasjvgnafp";
   };
 
 in

@@ -9,7 +9,7 @@ let
 in
 { pkgs ? import pinnedNixpkgsSrc {} }:
 
-  pkgs.llvmPackages.stdenv.mkDerivation {
+  pkgs.llvmPackages.stdenv.mkDerivation rec {
     name = "encapfn-mpk-devshell";
 
     buildInputs = with pkgs; [
@@ -41,9 +41,7 @@ in
       export LIBCLANG_PATH="${pkgs.libclang.lib}/lib"
 
       # Required for dlopen:
-      export LD_LIBRARY_PATH="${pkgs.lib.makeLibraryPath (with pkgs; [
-        libsodium csfml freeglut libGL glew libGLU brotli openblas stdenv.cc.cc.lib
-      ])}"
+      export LD_LIBRARY_PATH="${pkgs.lib.makeLibraryPath buildInputs}"
 
       # Required for building Tock boards:
       export OBJDUMP="${pkgs.llvm}/bin/llvm-objdump"

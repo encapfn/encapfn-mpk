@@ -34,6 +34,9 @@ in
 
       # Dependencies for building Tock and the EF bindings / libraries in there:
       clang llvm qemu
+
+      # Development tools:
+      gdb
     ];
 
     shellHook = ''

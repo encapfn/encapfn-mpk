@@ -1,0 +1,13 @@
+wrapper_name = "Llhttp"
+
+[functions.llhttp_settings_init]
+fntab_id = 1
+
+[functions.llhttp_init]
+fntab_id = 2
+
+[functions.llhttp_execute]
+fntab_id = 3
+
+[functions.llhttp_errno_name]
+fntab_id = 4

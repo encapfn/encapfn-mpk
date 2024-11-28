@@ -3,6 +3,7 @@ resolver = "2"
 members = [
     "encapfn-mpk",
     "examples/libsodium",
+    "examples/llhttp",
 ]
 
 [workspace.package]

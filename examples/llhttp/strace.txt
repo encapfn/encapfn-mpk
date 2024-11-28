@@ -1,0 +1,667 @@
+[2024-11-23T18:20:15Z INFO  encapfn_mpk] Initializing new EncapfnMPKRt instance, id 0
+[2024-11-23T18:20:15Z INFO  encapfn_mpk] EncapfnMPKRt[#0]: Rust thread local: 0x7f09eb794000
+[2024-11-23T18:20:15Z INFO  encapfn_mpk] EncapfnMPKRt[#0]: ASM thread local: 7f09eb794000
+[2024-11-23T18:20:15Z INFO  encapfn_mpk] Allocated global PKEYs: GlobalPkeys { rw: 2, ro: 1 }
+[2024-11-23T18:20:15Z DEBUG encapfn_mpk] EncapfnMPKRt[#0]: Allocated MPK PKEYs for global memory regions: R-O 1, R/W 2
+[2024-11-23T18:20:15Z DEBUG encapfn_mpk] EncapfnMPKRt[#0]: Allocated MPK PKEY for R/W foreign library memory regions: 3
+[2024-11-23T18:20:15Z DEBUG encapfn_mpk] EncapfnMPKRt[#0]: Calculated foreign code PKRU register as: fffffffe / 11111111111111111111111111111110
+[2024-11-23T18:20:15Z DEBUG encapfn_mpk] EncapfnMPKRt[#0]: Loaded EncapfnMPK Rt runtime at path: "/tmp/.tmpo5hteh"
+[2024-11-23T18:20:15Z DEBUG encapfn_mpk] EncapfnMPKRt[#0]: Loaded EncapfnMPK Rt with dlmopen into new namespace, handle: 0x55916da20e30
+[2024-11-23T18:20:15Z TRACE encapfn_mpk] pkey_mprotect(0x7f09eaf88000, 8388608, 3, pkey = 3) // Foreign Stack
+[2024-11-23T18:20:15Z DEBUG encapfn_mpk] EncapfnMPKRt[#0]: Allocated foreign stack memory from 0x7f09eb788000 down to  0x7f09eaf88000, protected with PKEY 3
+[2024-11-23T18:20:15Z DEBUG encapfn_mpk] EncapfnMPKRt[#0]: Allocating heap pages for foreign code, 131072 MB
+[2024-11-23T18:20:15Z TRACE encapfn_mpk] pkey_mprotect(0x7ee9eaf88000, 137438953472, 3, pkey = 3) // Foreign Heap
+[2024-11-23T18:20:15Z DEBUG encapfn_mpk] EncapfnMPKRt[#0]: Allocated heap pages at 0x7ee9eaf88000 -- 0x7f09eaf88000, protected with library PKEY 3
+[2024-11-23T18:20:15Z DEBUG encapfn_mpk] EncapfnMPKRt[#0]: Initializing runtime by calling "ef_runtime_init" at 0x7f09eb7896d0
+[2024-11-23T18:20:15Z TRACE encapfn_mpk] pkey_mprotect(0x7f09eb794000, 4096, 3, pkey = 1) // RUST_THREAD_STATE
+[2024-11-23T18:20:15Z DEBUG encapfn_mpk] EncapfnMPKRt[#0]: Callback infrastructure initialized!
+[2024-11-23T18:20:15Z DEBUG encapfn_mpk] EncapfnMPKRt[#0]: Resolved link namespace ID for runtime library: 0x1
+[2024-11-23T18:20:15Z DEBUG encapfn_mpk] EncapfnMPKRt[#0]: Adding library "libllhttp.so" to dummy loader ELF file
+[2024-11-23T18:20:15Z DEBUG encapfn_mpk] EncapfnMPKRt[#0]: Loading dummy loader ELF file from "/tmp/.tmpSo93UN" into runtime's link namespace (0x1)
+[2024-11-23T18:20:15Z DEBUG encapfn_mpk] EncapfnMPKRt[#0]: About to dlmopen the library!
+[2024-11-23T18:20:15Z DEBUG encapfn_mpk] EncapfnMPKRt[#0]: dlmopened the library!
+[2024-11-23T18:20:15Z DEBUG encapfn_mpk] EncapfnMPKRt[#0]: Loaded dummy loader ELF file
+[2024-11-23T18:20:15Z DEBUG encapfn_mpk] EncapfnMPKRt[#0]: Engaging memory protection for all subsequent foreign library calls with PKRU fffffffe
+[2024-11-23T18:20:15Z DEBUG encapfn_mpk] EncapfnMPKRt[#0]: Queried runtime link map: [
+        LinkMapEntry {
+            addr: 0x00007f09eb788000,
+            name: "/tmp/.tmpo5hteh",
+        },
+        LinkMapEntry {
+            addr: 0x00007ee9eaf82000,
+            name: "/tmp/.tmpSo93UN",
+        },
+        LinkMapEntry {
+            addr: 0x00007ee9eaf6f000,
+            name: "/nix/store/3qli0xs18rqgi49jwjsqkny6ly06swqg-llhttp-9.2.1/lib/libllhttp.so",
+        },
+        LinkMapEntry {
+            addr: 0x00007ee9ead76000,
+            name: "/nix/store/pacbfvpzqz2mksby36awvbcn051zcji3-glibc-2.40-36/lib/libc.so.6",
+        },
+        LinkMapEntry {
+            addr: 0x00007f09ebd06000,
+            name: "/nix/store/pacbfvpzqz2mksby36awvbcn051zcji3-glibc-2.40-36/lib/ld-linux-x86-64.so.2",
+        },
+    ]
+[2024-11-23T18:20:15Z DEBUG encapfn_mpk] EncapfnMPKRt[#0]: Queried main program link map: [
+        LinkMapEntry {
+            addr: 0x000055913819c000,
+            name: "",
+        },
+        LinkMapEntry {
+            addr: 0x00007ffe774ef000,
+            name: "linux-vdso.so.1",
+        },
+        LinkMapEntry {
+            addr: 0x00007f09ebaa2000,
+            name: "/nix/store/97f3gw9vpyxvwjv2i673isvg92q65mwn-gcc-13.3.0-lib/lib/libstdc++.so.6",
+        },
+        LinkMapEntry {
+            addr: 0x00007f09eba7d000,
+            name: "/nix/store/97f3gw9vpyxvwjv2i673isvg92q65mwn-gcc-13.3.0-lib/lib/libgcc_s.so.1",
+        },
+        LinkMapEntry {
+            addr: 0x00007f09eb882000,
+            name: "/nix/store/pacbfvpzqz2mksby36awvbcn051zcji3-glibc-2.40-36/lib/libc.so.6",
+        },
+        LinkMapEntry {
+            addr: 0x00007f09ebd06000,
+            name: "/nix/store/pacbfvpzqz2mksby36awvbcn051zcji3-glibc-2.40-36/lib/ld-linux-x86-64.so.2",
+        },
+        LinkMapEntry {
+            addr: 0x00007f09eb79b000,
+            name: "/nix/store/pacbfvpzqz2mksby36awvbcn051zcji3-glibc-2.40-36/lib/libm.so.6",
+        },
+    ]
+[2024-11-23T18:20:15Z DEBUG encapfn_mpk] Maps:
+    55913819c000-5591382b1000 r--p 00000000 00:2b 1630780                    /home/leons/proj/encapfn/code/encapfn-mpk/target/debug/ef_llhttp
+    5591382b1000-559138671000 r-xp 00114000 00:2b 1630780                    /home/leons/proj/encapfn/code/encapfn-mpk/target/debug/ef_llhttp
+    559138672000-5591386a1000 r--p 004d4000 00:2b 1630780                    /home/leons/proj/encapfn/code/encapfn-mpk/target/debug/ef_llhttp
+    5591386a1000-5591386a2000 rw-p 00502000 00:2b 1630780                    /home/leons/proj/encapfn/code/encapfn-mpk/target/debug/ef_llhttp
+    55916da0e000-55916da47000 rw-p 00000000 00:00 0                          [heap]
+    7ee9ead76000-7ee9ead9e000 r--p 00000000 00:1e 1595160                    /nix/store/pacbfvpzqz2mksby36awvbcn051zcji3-glibc-2.40-36/lib/libc.so.6
+    7ee9ead9e000-7ee9eaf06000 r-xp 00028000 00:1e 1595160                    /nix/store/pacbfvpzqz2mksby36awvbcn051zcji3-glibc-2.40-36/lib/libc.so.6
+    7ee9eaf06000-7ee9eaf5c000 r--p 00190000 00:1e 1595160                    /nix/store/pacbfvpzqz2mksby36awvbcn051zcji3-glibc-2.40-36/lib/libc.so.6
+    7ee9eaf5c000-7ee9eaf60000 r--p 001e5000 00:1e 1595160                    /nix/store/pacbfvpzqz2mksby36awvbcn051zcji3-glibc-2.40-36/lib/libc.so.6
+    7ee9eaf60000-7ee9eaf62000 rw-p 001e9000 00:1e 1595160                    /nix/store/pacbfvpzqz2mksby36awvbcn051zcji3-glibc-2.40-36/lib/libc.so.6
+    7ee9eaf62000-7ee9eaf6f000 rw-p 00000000 00:00 0 
+    7ee9eaf6f000-7ee9eaf72000 r--p 00000000 00:1e 1928672                    /nix/store/3qli0xs18rqgi49jwjsqkny6ly06swqg-llhttp-9.2.1/lib/libllhttp.so.9.2.1
+    7ee9eaf72000-7ee9eaf7b000 r-xp 00003000 00:1e 1928672                    /nix/store/3qli0xs18rqgi49jwjsqkny6ly06swqg-llhttp-9.2.1/lib/libllhttp.so.9.2.1
+    7ee9eaf7b000-7ee9eaf80000 r--p 0000c000 00:1e 1928672                    /nix/store/3qli0xs18rqgi49jwjsqkny6ly06swqg-llhttp-9.2.1/lib/libllhttp.so.9.2.1
+    7ee9eaf80000-7ee9eaf81000 r--p 00010000 00:1e 1928672                    /nix/store/3qli0xs18rqgi49jwjsqkny6ly06swqg-llhttp-9.2.1/lib/libllhttp.so.9.2.1
+    7ee9eaf81000-7ee9eaf82000 rw-p 00011000 00:1e 1928672                    /nix/store/3qli0xs18rqgi49jwjsqkny6ly06swqg-llhttp-9.2.1/lib/libllhttp.so.9.2.1
+    7ee9eaf82000-7ee9eaf83000 r--p 00000000 00:1d 369658                     /tmp/.tmpSo93UN
+    7ee9eaf83000-7ee9eaf84000 r-xp 00001000 00:1d 369658                     /tmp/.tmpSo93UN
+    7ee9eaf84000-7ee9eaf85000 r--p 00002000 00:1d 369658                     /tmp/.tmpSo93UN
+    7ee9eaf85000-7ee9eaf86000 r--p 00002000 00:1d 369658                     /tmp/.tmpSo93UN
+    7ee9eaf86000-7ee9eaf88000 rw-p 00004000 00:1d 369658                     /tmp/.tmpSo93UN
+    7ee9eaf88000-7f09eb788000 rw-p 00000000 00:00 0 
+    7f09eb788000-7f09eb789000 r--p 00000000 00:1d 369764                     /tmp/.tmpo5hteh
+    7f09eb789000-7f09eb78a000 r-xp 00001000 00:1d 369764                     /tmp/.tmpo5hteh
+    7f09eb78a000-7f09eb78b000 r--p 00002000 00:1d 369764                     /tmp/.tmpo5hteh
+    7f09eb78b000-7f09eb78c000 r--p 00002000 00:1d 369764                     /tmp/.tmpo5hteh
+    7f09eb78c000-7f09eb78d000 rw-p 00000000 00:00 0 
+    7f09eb78d000-7f09eb78e000 ---p 00000000 00:00 0 
+    7f09eb78e000-7f09eb794000 rw-p 00000000 00:00 0 
+    7f09eb794000-7f09eb795000 rw-p 00000000 00:00 0 
+    7f09eb795000-7f09eb79b000 rw-p 00000000 00:00 0 
+    7f09eb79b000-7f09eb7ab000 r--p 00000000 00:1e 1595174                    /nix/store/pacbfvpzqz2mksby36awvbcn051zcji3-glibc-2.40-36/lib/libm.so.6
+    7f09eb7ab000-7f09eb826000 r-xp 00010000 00:1e 1595174                    /nix/store/pacbfvpzqz2mksby36awvbcn051zcji3-glibc-2.40-36/lib/libm.so.6
+    7f09eb826000-7f09eb880000 r--p 0008b000 00:1e 1595174                    /nix/store/pacbfvpzqz2mksby36awvbcn051zcji3-glibc-2.40-36/lib/libm.so.6
+    7f09eb880000-7f09eb881000 r--p 000e5000 00:1e 1595174                    /nix/store/pacbfvpzqz2mksby36awvbcn051zcji3-glibc-2.40-36/lib/libm.so.6
+    7f09eb881000-7f09eb882000 rw-p 000e6000 00:1e 1595174                    /nix/store/pacbfvpzqz2mksby36awvbcn051zcji3-glibc-2.40-36/lib/libm.so.6
+    7f09eb882000-7f09eb8aa000 r--p 00000000 00:1e 1595160                    /nix/store/pacbfvpzqz2mksby36awvbcn051zcji3-glibc-2.40-36/lib/libc.so.6
+    7f09eb8aa000-7f09eba12000 r-xp 00028000 00:1e 1595160                    /nix/store/pacbfvpzqz2mksby36awvbcn051zcji3-glibc-2.40-36/lib/libc.so.6
+    7f09eba12000-7f09eba68000 r--p 00190000 00:1e 1595160                    /nix/store/pacbfvpzqz2mksby36awvbcn051zcji3-glibc-2.40-36/lib/libc.so.6
+    7f09eba68000-7f09eba6c000 r--p 001e5000 00:1e 1595160                    /nix/store/pacbfvpzqz2mksby36awvbcn051zcji3-glibc-2.40-36/lib/libc.so.6
+    7f09eba6c000-7f09eba6e000 rw-p 001e9000 00:1e 1595160                    /nix/store/pacbfvpzqz2mksby36awvbcn051zcji3-glibc-2.40-36/lib/libc.so.6
+    7f09eba6e000-7f09eba7d000 rw-p 00000000 00:00 0 
+    7f09eba7d000-7f09eba81000 r--p 00000000 00:1e 1454444                    /nix/store/nhdjqagplar2fdrqnrxlab8vg9i36b3d-gcc-13.3.0-libgcc/lib/libgcc_s.so.1
+    7f09eba81000-7f09eba9c000 r-xp 00004000 00:1e 1454444                    /nix/store/nhdjqagplar2fdrqnrxlab8vg9i36b3d-gcc-13.3.0-libgcc/lib/libgcc_s.so.1
+    7f09eba9c000-7f09ebaa0000 r--p 0001f000 00:1e 1454444                    /nix/store/nhdjqagplar2fdrqnrxlab8vg9i36b3d-gcc-13.3.0-libgcc/lib/libgcc_s.so.1
+    7f09ebaa0000-7f09ebaa1000 r--p 00022000 00:1e 1454444                    /nix/store/nhdjqagplar2fdrqnrxlab8vg9i36b3d-gcc-13.3.0-libgcc/lib/libgcc_s.so.1
+    7f09ebaa1000-7f09ebaa2000 rw-p 00023000 00:1e 1454444                    /nix/store/nhdjqagplar2fdrqnrxlab8vg9i36b3d-gcc-13.3.0-libgcc/lib/libgcc_s.so.1
+    7f09ebaa2000-7f09ebb46000 r--p 00000000 00:1e 1619530                    /nix/store/97f3gw9vpyxvwjv2i673isvg92q65mwn-gcc-13.3.0-lib/lib/libstdc++.so.6.0.32
+    7f09ebb46000-7f09ebc65000 r-xp 000a4000 00:1e 1619530                    /nix/store/97f3gw9vpyxvwjv2i673isvg92q65mwn-gcc-13.3.0-lib/lib/libstdc++.so.6.0.32
+    7f09ebc65000-7f09ebcf2000 r--p 001c3000 00:1e 1619530                    /nix/store/97f3gw9vpyxvwjv2i673isvg92q65mwn-gcc-13.3.0-lib/lib/libstdc++.so.6.0.32
+    7f09ebcf2000-7f09ebcff000 r--p 00250000 00:1e 1619530                    /nix/store/97f3gw9vpyxvwjv2i673isvg92q65mwn-gcc-13.3.0-lib/lib/libstdc++.so.6.0.32
+    7f09ebcff000-7f09ebd00000 rw-p 0025d000 00:1e 1619530                    /nix/store/97f3gw9vpyxvwjv2i673isvg92q65mwn-gcc-13.3.0-lib/lib/libstdc++.so.6.0.32
+    7f09ebd00000-7f09ebd06000 rw-p 00000000 00:00 0 
+    7f09ebd06000-7f09ebd07000 r--p 00000000 00:1e 1595148                    /nix/store/pacbfvpzqz2mksby36awvbcn051zcji3-glibc-2.40-36/lib/ld-linux-x86-64.so.2
+    7f09ebd07000-7f09ebd30000 r-xp 00001000 00:1e 1595148                    /nix/store/pacbfvpzqz2mksby36awvbcn051zcji3-glibc-2.40-36/lib/ld-linux-x86-64.so.2
+    7f09ebd30000-7f09ebd3b000 r--p 0002a000 00:1e 1595148                    /nix/store/pacbfvpzqz2mksby36awvbcn051zcji3-glibc-2.40-36/lib/ld-linux-x86-64.so.2
+    7f09ebd3b000-7f09ebd3d000 r--p 00035000 00:1e 1595148                    /nix/store/pacbfvpzqz2mksby36awvbcn051zcji3-glibc-2.40-36/lib/ld-linux-x86-64.so.2
+    7f09ebd3d000-7f09ebd3f000 rw-p 00037000 00:1e 1595148                    /nix/store/pacbfvpzqz2mksby36awvbcn051zcji3-glibc-2.40-36/lib/ld-linux-x86-64.so.2
+    7ffe77457000-7ffe77488000 rw-p 00000000 00:00 0                          [stack]
+    7ffe774eb000-7ffe774ef000 r--p 00000000 00:00 0                          [vvar]
+    7ffe774ef000-7ffe774f1000 r-xp 00000000 00:00 0                          [vdso]
+    ffffffffff600000-ffffffffff601000 --xp 00000000 00:00 0                  [vsyscall]
+    
+[2024-11-23T18:20:15Z TRACE encapfn_mpk] pkey_mprotect(0x7ee9ead76000, 163840, 1, pkey = 3) // library LinkMapEntry { addr: 0x7ee9ead76000, name: "/nix/store/pacbfvpzqz2mksby36awvbcn051zcji3-glibc-2.40-36/lib/libc.so.6" }, region [0x7ee9ead76000, 0x7ee9ead9e000)
+[2024-11-23T18:20:15Z TRACE encapfn_mpk] pkey_mprotect(0x7ee9ead9e000, 1474560, 5, pkey = 3) // library LinkMapEntry { addr: 0x7ee9ead76000, name: "/nix/store/pacbfvpzqz2mksby36awvbcn051zcji3-glibc-2.40-36/lib/libc.so.6" }, region [0x7ee9ead9e000, 0x7ee9eaf06000)
+[2024-11-23T18:20:15Z TRACE encapfn_mpk] pkey_mprotect(0x7ee9eaf06000, 352256, 1, pkey = 3) // library LinkMapEntry { addr: 0x7ee9ead76000, name: "/nix/store/pacbfvpzqz2mksby36awvbcn051zcji3-glibc-2.40-36/lib/libc.so.6" }, region [0x7ee9eaf06000, 0x7ee9eaf5c000)
+[2024-11-23T18:20:15Z TRACE encapfn_mpk] pkey_mprotect(0x7ee9eaf5c000, 16384, 1, pkey = 3) // library LinkMapEntry { addr: 0x7ee9ead76000, name: "/nix/store/pacbfvpzqz2mksby36awvbcn051zcji3-glibc-2.40-36/lib/libc.so.6" }, region [0x7ee9eaf5c000, 0x7ee9eaf60000)
+[2024-11-23T18:20:15Z TRACE encapfn_mpk] pkey_mprotect(0x7ee9eaf60000, 8192, 3, pkey = 3) // library LinkMapEntry { addr: 0x7ee9ead76000, name: "/nix/store/pacbfvpzqz2mksby36awvbcn051zcji3-glibc-2.40-36/lib/libc.so.6" }, region [0x7ee9eaf60000, 0x7ee9eaf62000)
+[2024-11-23T18:20:15Z TRACE encapfn_mpk] pkey_mprotect(0x7ee9eaf62000, 53248, 3, pkey = 3) // library LinkMapEntry { addr: 0x7ee9ead76000, name: "/nix/store/pacbfvpzqz2mksby36awvbcn051zcji3-glibc-2.40-36/lib/libc.so.6" }, region [0x7ee9eaf62000, 0x7ee9eaf6f000)
+[2024-11-23T18:20:15Z TRACE encapfn_mpk] pkey_mprotect(0x7ee9eaf6f000, 12288, 1, pkey = 3) // library LinkMapEntry { addr: 0x7ee9eaf6f000, name: "/nix/store/3qli0xs18rqgi49jwjsqkny6ly06swqg-llhttp-9.2.1/lib/libllhttp.so" }, region [0x7ee9eaf6f000, 0x7ee9eaf72000)
+[2024-11-23T18:20:15Z TRACE encapfn_mpk] pkey_mprotect(0x7ee9eaf72000, 36864, 5, pkey = 3) // library LinkMapEntry { addr: 0x7ee9eaf6f000, name: "/nix/store/3qli0xs18rqgi49jwjsqkny6ly06swqg-llhttp-9.2.1/lib/libllhttp.so" }, region [0x7ee9eaf72000, 0x7ee9eaf7b000)
+[2024-11-23T18:20:15Z TRACE encapfn_mpk] pkey_mprotect(0x7ee9eaf7b000, 20480, 1, pkey = 3) // library LinkMapEntry { addr: 0x7ee9eaf6f000, name: "/nix/store/3qli0xs18rqgi49jwjsqkny6ly06swqg-llhttp-9.2.1/lib/libllhttp.so" }, region [0x7ee9eaf7b000, 0x7ee9eaf80000)
+[2024-11-23T18:20:15Z TRACE encapfn_mpk] pkey_mprotect(0x7ee9eaf80000, 4096, 1, pkey = 3) // library LinkMapEntry { addr: 0x7ee9eaf6f000, name: "/nix/store/3qli0xs18rqgi49jwjsqkny6ly06swqg-llhttp-9.2.1/lib/libllhttp.so" }, region [0x7ee9eaf80000, 0x7ee9eaf81000)
+[2024-11-23T18:20:15Z TRACE encapfn_mpk] pkey_mprotect(0x7ee9eaf81000, 4096, 3, pkey = 3) // library LinkMapEntry { addr: 0x7ee9eaf6f000, name: "/nix/store/3qli0xs18rqgi49jwjsqkny6ly06swqg-llhttp-9.2.1/lib/libllhttp.so" }, region [0x7ee9eaf81000, 0x7ee9eaf82000)
+[2024-11-23T18:20:15Z TRACE encapfn_mpk] pkey_mprotect(0x7ee9eaf82000, 4096, 1, pkey = 3) // library LinkMapEntry { addr: 0x7ee9eaf82000, name: "/tmp/.tmpSo93UN" }, region [0x7ee9eaf82000, 0x7ee9eaf83000)
+[2024-11-23T18:20:15Z TRACE encapfn_mpk] pkey_mprotect(0x7ee9eaf83000, 4096, 5, pkey = 3) // library LinkMapEntry { addr: 0x7ee9eaf82000, name: "/tmp/.tmpSo93UN" }, region [0x7ee9eaf83000, 0x7ee9eaf84000)
+[2024-11-23T18:20:15Z TRACE encapfn_mpk] pkey_mprotect(0x7ee9eaf84000, 4096, 1, pkey = 3) // library LinkMapEntry { addr: 0x7ee9eaf82000, name: "/tmp/.tmpSo93UN" }, region [0x7ee9eaf84000, 0x7ee9eaf85000)
+[2024-11-23T18:20:15Z TRACE encapfn_mpk] pkey_mprotect(0x7ee9eaf85000, 4096, 1, pkey = 3) // library LinkMapEntry { addr: 0x7ee9eaf82000, name: "/tmp/.tmpSo93UN" }, region [0x7ee9eaf85000, 0x7ee9eaf86000)
+[2024-11-23T18:20:15Z TRACE encapfn_mpk] pkey_mprotect(0x7ee9eaf86000, 8192, 3, pkey = 3) // library LinkMapEntry { addr: 0x7ee9eaf82000, name: "/tmp/.tmpSo93UN" }, region [0x7ee9eaf86000, 0x7ee9eaf88000)
+[2024-11-23T18:20:15Z WARN  encapfn_mpk] DROPPING pkey_mprotect(0x7ee9eaf88000, 137447342080, 3, pkey = 3), already protected! (requested purpose: library LinkMapEntry { addr: 0x7ee9eaf82000, name: "/tmp/.tmpSo93UN" }, region [0x7ee9eaf88000, 0x7f09eb788000))
+[2024-11-23T18:20:15Z TRACE encapfn_mpk] pkey_mprotect(0x7f09eb788000, 4096, 1, pkey = 3) // library LinkMapEntry { addr: 0x7f09eb788000, name: "/tmp/.tmpo5hteh" }, region [0x7f09eb788000, 0x7f09eb789000)
+[2024-11-23T18:20:15Z TRACE encapfn_mpk] pkey_mprotect(0x7f09eb789000, 4096, 5, pkey = 3) // library LinkMapEntry { addr: 0x7f09eb788000, name: "/tmp/.tmpo5hteh" }, region [0x7f09eb789000, 0x7f09eb78a000)
+[2024-11-23T18:20:15Z TRACE encapfn_mpk] pkey_mprotect(0x7f09eb78a000, 4096, 1, pkey = 3) // library LinkMapEntry { addr: 0x7f09eb788000, name: "/tmp/.tmpo5hteh" }, region [0x7f09eb78a000, 0x7f09eb78b000)
+[2024-11-23T18:20:15Z TRACE encapfn_mpk] pkey_mprotect(0x7f09eb78b000, 4096, 1, pkey = 3) // library LinkMapEntry { addr: 0x7f09eb788000, name: "/tmp/.tmpo5hteh" }, region [0x7f09eb78b000, 0x7f09eb78c000)
+[2024-11-23T18:20:15Z TRACE encapfn_mpk] pkey_mprotect(0x7f09eb78c000, 4096, 3, pkey = 3) // library LinkMapEntry { addr: 0x7f09eb788000, name: "/tmp/.tmpo5hteh" }, region [0x7f09eb78c000, 0x7f09eb78d000)
+[2024-11-23T18:20:15Z TRACE encapfn_mpk] pkey_mprotect(0x7f09eb78d000, 4096, 0, pkey = 3) // library LinkMapEntry { addr: 0x7f09eb788000, name: "/tmp/.tmpo5hteh" }, region [0x7f09eb78d000, 0x7f09eb78e000)
+[2024-11-23T18:20:15Z TRACE encapfn_mpk] pkey_mprotect(0x7f09eb78e000, 24576, 3, pkey = 3) // library LinkMapEntry { addr: 0x7f09eb788000, name: "/tmp/.tmpo5hteh" }, region [0x7f09eb78e000, 0x7f09eb794000)
+[2024-11-23T18:20:15Z WARN  encapfn_mpk] DROPPING pkey_mprotect(0x7f09eb794000, 4096, 3, pkey = 3), already protected! (requested purpose: library LinkMapEntry { addr: 0x7f09eb788000, name: "/tmp/.tmpo5hteh" }, region [0x7f09eb794000, 0x7f09eb795000))
+[2024-11-23T18:20:15Z TRACE encapfn_mpk] pkey_mprotect(0x7f09eb795000, 24576, 3, pkey = 3) // library LinkMapEntry { addr: 0x7f09eb788000, name: "/tmp/.tmpo5hteh" }, region [0x7f09eb795000, 0x7f09eb79b000)
+[2024-11-23T18:20:15Z TRACE encapfn_mpk] pkey_mprotect(0x7f09ebd06000, 4096, 1, pkey = 1) // global ro library LinkMapEntry { addr: 0x7f09ebd06000, name: "/nix/store/pacbfvpzqz2mksby36awvbcn051zcji3-glibc-2.40-36/lib/ld-linux-x86-64.so.2" }, region [0x7f09ebd06000, 0x7f09ebd07000)
+[2024-11-23T18:20:15Z TRACE encapfn_mpk] pkey_mprotect(0x7f09ebd07000, 167936, 5, pkey = 1) // global ro library LinkMapEntry { addr: 0x7f09ebd06000, name: "/nix/store/pacbfvpzqz2mksby36awvbcn051zcji3-glibc-2.40-36/lib/ld-linux-x86-64.so.2" }, region [0x7f09ebd07000, 0x7f09ebd30000)
+[2024-11-23T18:20:15Z TRACE encapfn_mpk] pkey_mprotect(0x7f09ebd30000, 45056, 1, pkey = 1) // global ro library LinkMapEntry { addr: 0x7f09ebd06000, name: "/nix/store/pacbfvpzqz2mksby36awvbcn051zcji3-glibc-2.40-36/lib/ld-linux-x86-64.so.2" }, region [0x7f09ebd30000, 0x7f09ebd3b000)
+[2024-11-23T18:20:15Z TRACE encapfn_mpk] pkey_mprotect(0x7f09ebd3b000, 8192, 1, pkey = 1) // global ro library LinkMapEntry { addr: 0x7f09ebd06000, name: "/nix/store/pacbfvpzqz2mksby36awvbcn051zcji3-glibc-2.40-36/lib/ld-linux-x86-64.so.2" }, region [0x7f09ebd3b000, 0x7f09ebd3d000)
+[2024-11-23T18:20:15Z TRACE encapfn_mpk] pkey_mprotect(0x7f09ebd3d000, 8192, 3, pkey = 1) // global ro library LinkMapEntry { addr: 0x7f09ebd06000, name: "/nix/store/pacbfvpzqz2mksby36awvbcn051zcji3-glibc-2.40-36/lib/ld-linux-x86-64.so.2" }, region [0x7f09ebd3d000, 0x7f09ebd3f000)
+[2024-11-23T18:20:15Z TRACE encapfn_mpk] pkey_mprotect(0x7ffe774ef000, 8192, 5, pkey = 2) // vDSO
+[2024-11-23T18:20:15Z DEBUG encapfn_mpk] EncapfnMPKRt[#0]: Assigned PKEYs to memory regions: {
+        1: [
+            (
+                0x00007f09ebd06000..0x00007f09ebd07000,
+                "Common Library \"/nix/store/pacbfvpzqz2mksby36awvbcn051zcji3-glibc-2.40-36/lib/ld-linux-x86-64.so.2\"",
+            ),
+            (
+                0x00007f09ebd07000..0x00007f09ebd30000,
+                "Common Library \"/nix/store/pacbfvpzqz2mksby36awvbcn051zcji3-glibc-2.40-36/lib/ld-linux-x86-64.so.2\"",
+            ),
+            (
+                0x00007f09ebd30000..0x00007f09ebd3b000,
+                "Common Library \"/nix/store/pacbfvpzqz2mksby36awvbcn051zcji3-glibc-2.40-36/lib/ld-linux-x86-64.so.2\"",
+            ),
+            (
+                0x00007f09ebd3b000..0x00007f09ebd3d000,
+                "Common Library \"/nix/store/pacbfvpzqz2mksby36awvbcn051zcji3-glibc-2.40-36/lib/ld-linux-x86-64.so.2\"",
+            ),
+            (
+                0x00007f09ebd3d000..0x00007f09ebd3f000,
+                "Common Library \"/nix/store/pacbfvpzqz2mksby36awvbcn051zcji3-glibc-2.40-36/lib/ld-linux-x86-64.so.2\"",
+            ),
+        ],
+        3: [
+            (
+                0x00007f09eaf88000..0x00007f09eb788000,
+                "Foreign Stack",
+            ),
+            (
+                0x00007ee9eaf88000..0x00007f09eaf88000,
+                "Foreign Heap",
+            ),
+            (
+                0x00007ee9ead76000..0x00007ee9ead9e000,
+                "Foreign Library \"/nix/store/pacbfvpzqz2mksby36awvbcn051zcji3-glibc-2.40-36/lib/libc.so.6\"",
+            ),
+            (
+                0x00007ee9ead9e000..0x00007ee9eaf06000,
+                "Foreign Library \"/nix/store/pacbfvpzqz2mksby36awvbcn051zcji3-glibc-2.40-36/lib/libc.so.6\"",
+            ),
+            (
+                0x00007ee9eaf06000..0x00007ee9eaf5c000,
+                "Foreign Library \"/nix/store/pacbfvpzqz2mksby36awvbcn051zcji3-glibc-2.40-36/lib/libc.so.6\"",
+            ),
+            (
+                0x00007ee9eaf5c000..0x00007ee9eaf60000,
+                "Foreign Library \"/nix/store/pacbfvpzqz2mksby36awvbcn051zcji3-glibc-2.40-36/lib/libc.so.6\"",
+            ),
+            (
+                0x00007ee9eaf60000..0x00007ee9eaf62000,
+                "Foreign Library \"/nix/store/pacbfvpzqz2mksby36awvbcn051zcji3-glibc-2.40-36/lib/libc.so.6\"",
+            ),
+            (
+                0x00007ee9eaf62000..0x00007ee9eaf6f000,
+                "Foreign Library \"/nix/store/pacbfvpzqz2mksby36awvbcn051zcji3-glibc-2.40-36/lib/libc.so.6\"",
+            ),
+            (
+                0x00007ee9eaf6f000..0x00007ee9eaf72000,
+                "Foreign Library \"/nix/store/3qli0xs18rqgi49jwjsqkny6ly06swqg-llhttp-9.2.1/lib/libllhttp.so\"",
+            ),
+            (
+                0x00007ee9eaf72000..0x00007ee9eaf7b000,
+                "Foreign Library \"/nix/store/3qli0xs18rqgi49jwjsqkny6ly06swqg-llhttp-9.2.1/lib/libllhttp.so\"",
+            ),
+            (
+                0x00007ee9eaf7b000..0x00007ee9eaf80000,
+                "Foreign Library \"/nix/store/3qli0xs18rqgi49jwjsqkny6ly06swqg-llhttp-9.2.1/lib/libllhttp.so\"",
+            ),
+            (
+                0x00007ee9eaf80000..0x00007ee9eaf81000,
+                "Foreign Library \"/nix/store/3qli0xs18rqgi49jwjsqkny6ly06swqg-llhttp-9.2.1/lib/libllhttp.so\"",
+            ),
+            (
+                0x00007ee9eaf81000..0x00007ee9eaf82000,
+                "Foreign Library \"/nix/store/3qli0xs18rqgi49jwjsqkny6ly06swqg-llhttp-9.2.1/lib/libllhttp.so\"",
+            ),
+            (
+                0x00007ee9eaf82000..0x00007ee9eaf83000,
+                "Foreign Library \"/tmp/.tmpSo93UN\"",
+            ),
+            (
+                0x00007ee9eaf83000..0x00007ee9eaf84000,
+                "Foreign Library \"/tmp/.tmpSo93UN\"",
+            ),
+            (
+                0x00007ee9eaf84000..0x00007ee9eaf85000,
+                "Foreign Library \"/tmp/.tmpSo93UN\"",
+            ),
+            (
+                0x00007ee9eaf85000..0x00007ee9eaf86000,
+                "Foreign Library \"/tmp/.tmpSo93UN\"",
+            ),
+            (
+                0x00007ee9eaf86000..0x00007ee9eaf88000,
+                "Foreign Library \"/tmp/.tmpSo93UN\"",
+            ),
+            (
+                0x00007ee9eaf88000..0x00007f09eb788000,
+                "Foreign Library \"/tmp/.tmpSo93UN\"",
+            ),
+            (
+                0x00007f09eb788000..0x00007f09eb789000,
+                "Foreign Library \"/tmp/.tmpo5hteh\"",
+            ),
+            (
+                0x00007f09eb789000..0x00007f09eb78a000,
+                "Foreign Library \"/tmp/.tmpo5hteh\"",
+            ),
+            (
+                0x00007f09eb78a000..0x00007f09eb78b000,
+                "Foreign Library \"/tmp/.tmpo5hteh\"",
+            ),
+            (
+                0x00007f09eb78b000..0x00007f09eb78c000,
+                "Foreign Library \"/tmp/.tmpo5hteh\"",
+            ),
+            (
+                0x00007f09eb78c000..0x00007f09eb78d000,
+                "Foreign Library \"/tmp/.tmpo5hteh\"",
+            ),
+            (
+                0x00007f09eb78d000..0x00007f09eb78e000,
+                "Foreign Library \"/tmp/.tmpo5hteh\"",
+            ),
+            (
+                0x00007f09eb78e000..0x00007f09eb794000,
+                "Foreign Library \"/tmp/.tmpo5hteh\"",
+            ),
+            (
+                0x00007f09eb794000..0x00007f09eb795000,
+                "Foreign Library \"/tmp/.tmpo5hteh\"",
+            ),
+            (
+                0x00007f09eb795000..0x00007f09eb79b000,
+                "Foreign Library \"/tmp/.tmpo5hteh\"",
+            ),
+        ],
+        2: [
+            (
+                0x00007ffe774ef000..0x00007ffe774f1000,
+                "vDSO",
+            ),
+        ],
+    }
+[2024-11-23T18:20:15Z DEBUG encapfn_mpk] EncapfnMPKRt[#0]: Runtime initialized!
+Created runtime!
+strace: Process 1887493 attached
+[2024-11-23T18:20:15Z INFO  encapfn_mpk] Initializing new EncapfnMPKRt instance, id 1
+[2024-11-23T18:20:15Z INFO  encapfn_mpk] EncapfnMPKRt[#1]: Rust thread local: 0x7f09eb794000
+[2024-11-23T18:20:15Z INFO  encapfn_mpk] EncapfnMPKRt[#1]: ASM thread local: 7f09eb794000
+[2024-11-23T18:20:15Z DEBUG encapfn_mpk] EncapfnMPKRt[#1]: Allocated MPK PKEYs for global memory regions: R-O 1, R/W 2
+[2024-11-23T18:20:15Z DEBUG encapfn_mpk] EncapfnMPKRt[#1]: Allocated MPK PKEY for R/W foreign library memory regions: 4
+[2024-11-23T18:20:15Z DEBUG encapfn_mpk] EncapfnMPKRt[#1]: Calculated foreign code PKRU register as: fffffffe / 11111111111111111111111111111110
+[2024-11-23T18:20:15Z DEBUG encapfn_mpk] EncapfnMPKRt[#1]: Loaded EncapfnMPK Rt runtime at path: "/tmp/.tmpzRc7o2"
+[2024-11-23T18:20:15Z DEBUG encapfn_mpk] EncapfnMPKRt[#1]: Loaded EncapfnMPK Rt with dlmopen into new namespace, handle: 0x55916da293f0
+[2024-11-23T18:20:15Z TRACE encapfn_mpk] pkey_mprotect(0x7ee9ea36d000, 8388608, 3, pkey = 4) // Foreign Stack
+[2024-11-23T18:20:15Z DEBUG encapfn_mpk] EncapfnMPKRt[#1]: Allocated foreign stack memory from 0x7ee9eab6d000 down to  0x7ee9ea36d000, protected with PKEY 4
+[2024-11-23T18:20:15Z DEBUG encapfn_mpk] EncapfnMPKRt[#1]: Allocating heap pages for foreign code, 131072 MB
+[2024-11-23T18:20:15Z TRACE encapfn_mpk] pkey_mprotect(0x7ec9e4000000, 137438953472, 3, pkey = 4) // Foreign Heap
+[2024-11-23T18:20:15Z DEBUG encapfn_mpk] EncapfnMPKRt[#1]: Allocated heap pages at 0x7ec9e4000000 -- 0x7ee9e4000000, protected with library PKEY 4
+[2024-11-23T18:20:15Z DEBUG encapfn_mpk] EncapfnMPKRt[#1]: Initializing runtime by calling "ef_runtime_init" at 0x7ee9eab6e6d0
+[2024-11-23T18:20:15Z DEBUG encapfn_mpk] EncapfnMPKRt[#1]: Callback infrastructure initialized!
+[2024-11-23T18:20:15Z DEBUG encapfn_mpk] EncapfnMPKRt[#1]: Resolved link namespace ID for runtime library: 0x2
+[2024-11-23T18:20:15Z DEBUG encapfn_mpk] EncapfnMPKRt[#1]: Adding library "libllhttp.so" to dummy loader ELF file
+[2024-11-23T18:20:15Z DEBUG encapfn_mpk] EncapfnMPKRt[#1]: Loading dummy loader ELF file from "/tmp/.tmpopYxaE" into runtime's link namespace (0x2)
+[2024-11-23T18:20:15Z DEBUG encapfn_mpk] EncapfnMPKRt[#1]: About to dlmopen the library!
+[2024-11-23T18:20:15Z DEBUG encapfn_mpk] EncapfnMPKRt[#1]: dlmopened the library!
+[2024-11-23T18:20:15Z DEBUG encapfn_mpk] EncapfnMPKRt[#1]: Loaded dummy loader ELF file
+[2024-11-23T18:20:15Z DEBUG encapfn_mpk] EncapfnMPKRt[#1]: Engaging memory protection for all subsequent foreign library calls with PKRU fffffffe
+[2024-11-23T18:20:15Z DEBUG encapfn_mpk] EncapfnMPKRt[#1]: Queried runtime link map: [
+        LinkMapEntry {
+            addr: 0x00007ee9eab6d000,
+            name: "/tmp/.tmpzRc7o2",
+        },
+        LinkMapEntry {
+            addr: 0x00007ee9ea367000,
+            name: "/tmp/.tmpopYxaE",
+        },
+        LinkMapEntry {
+            addr: 0x00007ee9ea354000,
+            name: "/nix/store/3qli0xs18rqgi49jwjsqkny6ly06swqg-llhttp-9.2.1/lib/libllhttp.so",
+        },
+        LinkMapEntry {
+            addr: 0x00007ee9ea15b000,
+            name: "/nix/store/pacbfvpzqz2mksby36awvbcn051zcji3-glibc-2.40-36/lib/libc.so.6",
+        },
+        LinkMapEntry {
+            addr: 0x00007f09ebd06000,
+            name: "/nix/store/pacbfvpzqz2mksby36awvbcn051zcji3-glibc-2.40-36/lib/ld-linux-x86-64.so.2",
+        },
+    ]
+[2024-11-23T18:20:15Z DEBUG encapfn_mpk] EncapfnMPKRt[#1]: Queried main program link map: [
+        LinkMapEntry {
+            addr: 0x000055913819c000,
+            name: "",
+        },
+        LinkMapEntry {
+            addr: 0x00007ffe774ef000,
+            name: "linux-vdso.so.1",
+        },
+        LinkMapEntry {
+            addr: 0x00007f09ebaa2000,
+            name: "/nix/store/97f3gw9vpyxvwjv2i673isvg92q65mwn-gcc-13.3.0-lib/lib/libstdc++.so.6",
+        },
+        LinkMapEntry {
+            addr: 0x00007f09eba7d000,
+            name: "/nix/store/97f3gw9vpyxvwjv2i673isvg92q65mwn-gcc-13.3.0-lib/lib/libgcc_s.so.1",
+        },
+        LinkMapEntry {
+            addr: 0x00007f09eb882000,
+            name: "/nix/store/pacbfvpzqz2mksby36awvbcn051zcji3-glibc-2.40-36/lib/libc.so.6",
+        },
+        LinkMapEntry {
+            addr: 0x00007f09ebd06000,
+            name: "/nix/store/pacbfvpzqz2mksby36awvbcn051zcji3-glibc-2.40-36/lib/ld-linux-x86-64.so.2",
+        },
+        LinkMapEntry {
+            addr: 0x00007f09eb79b000,
+            name: "/nix/store/pacbfvpzqz2mksby36awvbcn051zcji3-glibc-2.40-36/lib/libm.so.6",
+        },
+    ]
+[2024-11-23T18:20:15Z DEBUG encapfn_mpk] Maps:
+    55913819c000-5591382b1000 r--p 00000000 00:2b 1630780                    /home/leons/proj/encapfn/code/encapfn-mpk/target/debug/ef_llhttp
+    5591382b1000-559138671000 r-xp 00114000 00:2b 1630780                    /home/leons/proj/encapfn/code/encapfn-mpk/target/debug/ef_llhttp
+    559138672000-5591386a1000 r--p 004d4000 00:2b 1630780                    /home/leons/proj/encapfn/code/encapfn-mpk/target/debug/ef_llhttp
+    5591386a1000-5591386a2000 rw-p 00502000 00:2b 1630780                    /home/leons/proj/encapfn/code/encapfn-mpk/target/debug/ef_llhttp
+    55916da0e000-55916da47000 rw-p 00000000 00:00 0                          [heap]
+    7ec9e4000000-7ee9e4000000 rw-p 00000000 00:00 0 
+    7ee9e4000000-7ee9e4021000 rw-p 00000000 00:00 0 
+    7ee9e4021000-7ee9e8000000 ---p 00000000 00:00 0 
+    7ee9ea15b000-7ee9ea183000 r--p 00000000 00:1e 1595160                    /nix/store/pacbfvpzqz2mksby36awvbcn051zcji3-glibc-2.40-36/lib/libc.so.6
+    7ee9ea183000-7ee9ea2eb000 r-xp 00028000 00:1e 1595160                    /nix/store/pacbfvpzqz2mksby36awvbcn051zcji3-glibc-2.40-36/lib/libc.so.6
+    7ee9ea2eb000-7ee9ea341000 r--p 00190000 00:1e 1595160                    /nix/store/pacbfvpzqz2mksby36awvbcn051zcji3-glibc-2.40-36/lib/libc.so.6
+    7ee9ea341000-7ee9ea345000 r--p 001e5000 00:1e 1595160                    /nix/store/pacbfvpzqz2mksby36awvbcn051zcji3-glibc-2.40-36/lib/libc.so.6
+    7ee9ea345000-7ee9ea347000 rw-p 001e9000 00:1e 1595160                    /nix/store/pacbfvpzqz2mksby36awvbcn051zcji3-glibc-2.40-36/lib/libc.so.6
+    7ee9ea347000-7ee9ea354000 rw-p 00000000 00:00 0 
+    7ee9ea354000-7ee9ea357000 r--p 00000000 00:1e 1928672                    /nix/store/3qli0xs18rqgi49jwjsqkny6ly06swqg-llhttp-9.2.1/lib/libllhttp.so.9.2.1
+    7ee9ea357000-7ee9ea360000 r-xp 00003000 00:1e 1928672                    /nix/store/3qli0xs18rqgi49jwjsqkny6ly06swqg-llhttp-9.2.1/lib/libllhttp.so.9.2.1
+    7ee9ea360000-7ee9ea365000 r--p 0000c000 00:1e 1928672                    /nix/store/3qli0xs18rqgi49jwjsqkny6ly06swqg-llhttp-9.2.1/lib/libllhttp.so.9.2.1
+    7ee9ea365000-7ee9ea366000 r--p 00010000 00:1e 1928672                    /nix/store/3qli0xs18rqgi49jwjsqkny6ly06swqg-llhttp-9.2.1/lib/libllhttp.so.9.2.1
+    7ee9ea366000-7ee9ea367000 rw-p 00011000 00:1e 1928672                    /nix/store/3qli0xs18rqgi49jwjsqkny6ly06swqg-llhttp-9.2.1/lib/libllhttp.so.9.2.1
+    7ee9ea367000-7ee9ea368000 r--p 00000000 00:1d 369974                     /tmp/.tmpopYxaE
+    7ee9ea368000-7ee9ea369000 r-xp 00001000 00:1d 369974                     /tmp/.tmpopYxaE
+    7ee9ea369000-7ee9ea36a000 r--p 00002000 00:1d 369974                     /tmp/.tmpopYxaE
+    7ee9ea36a000-7ee9ea36b000 r--p 00002000 00:1d 369974                     /tmp/.tmpopYxaE
+    7ee9ea36b000-7ee9ea36d000 rw-p 00004000 00:1d 369974                     /tmp/.tmpopYxaE
+    7ee9ea36d000-7ee9eab6d000 rw-p 00000000 00:00 0 
+    7ee9eab6d000-7ee9eab6e000 r--p 00000000 00:1d 369972                     /tmp/.tmpzRc7o2
+    7ee9eab6e000-7ee9eab6f000 r-xp 00001000 00:1d 369972                     /tmp/.tmpzRc7o2
+    7ee9eab6f000-7ee9eab70000 r--p 00002000 00:1d 369972                     /tmp/.tmpzRc7o2
+    7ee9eab70000-7ee9eab71000 r--p 00002000 00:1d 369972                     /tmp/.tmpzRc7o2
+    7ee9eab71000-7ee9eab72000 rw-p 00000000 00:00 0 
+    7ee9eab72000-7ee9eab73000 ---p 00000000 00:00 0 
+    7ee9eab73000-7ee9eab75000 rw-p 00000000 00:00 0 
+    7ee9eab75000-7ee9eab76000 ---p 00000000 00:00 0 
+    7ee9eab76000-7ee9ead76000 rw-p 00000000 00:00 0 
+    7ee9ead76000-7ee9ead9e000 r--p 00000000 00:1e 1595160                    /nix/store/pacbfvpzqz2mksby36awvbcn051zcji3-glibc-2.40-36/lib/libc.so.6
+    7ee9ead9e000-7ee9eaf06000 r-xp 00028000 00:1e 1595160                    /nix/store/pacbfvpzqz2mksby36awvbcn051zcji3-glibc-2.40-36/lib/libc.so.6
+    7ee9eaf06000-7ee9eaf5c000 r--p 00190000 00:1e 1595160                    /nix/store/pacbfvpzqz2mksby36awvbcn051zcji3-glibc-2.40-36/lib/libc.so.6
+    7ee9eaf5c000-7ee9eaf60000 r--p 001e5000 00:1e 1595160                    /nix/store/pacbfvpzqz2mksby36awvbcn051zcji3-glibc-2.40-36/lib/libc.so.6
+    7ee9eaf60000-7ee9eaf62000 rw-p 001e9000 00:1e 1595160                    /nix/store/pacbfvpzqz2mksby36awvbcn051zcji3-glibc-2.40-36/lib/libc.so.6
+    7ee9eaf62000-7ee9eaf6f000 rw-p 00000000 00:00 0 
+    7ee9eaf6f000-7ee9eaf72000 r--p 00000000 00:1e 1928672                    /nix/store/3qli0xs18rqgi49jwjsqkny6ly06swqg-llhttp-9.2.1/lib/libllhttp.so.9.2.1
+    7ee9eaf72000-7ee9eaf7b000 r-xp 00003000 00:1e 1928672                    /nix/store/3qli0xs18rqgi49jwjsqkny6ly06swqg-llhttp-9.2.1/lib/libllhttp.so.9.2.1
+    7ee9eaf7b000-7ee9eaf80000 r--p 0000c000 00:1e 1928672                    /nix/store/3qli0xs18rqgi49jwjsqkny6ly06swqg-llhttp-9.2.1/lib/libllhttp.so.9.2.1
+    7ee9eaf80000-7ee9eaf81000 r--p 00010000 00:1e 1928672                    /nix/store/3qli0xs18rqgi49jwjsqkny6ly06swqg-llhttp-9.2.1/lib/libllhttp.so.9.2.1
+    7ee9eaf81000-7ee9eaf82000 rw-p 00011000 00:1e 1928672                    /nix/store/3qli0xs18rqgi49jwjsqkny6ly06swqg-llhttp-9.2.1/lib/libllhttp.so.9.2.1
+    7ee9eaf82000-7ee9eaf83000 r--p 00000000 00:1d 369658                     /tmp/.tmpSo93UN
+    7ee9eaf83000-7ee9eaf84000 r-xp 00001000 00:1d 369658                     /tmp/.tmpSo93UN
+    7ee9eaf84000-7ee9eaf85000 r--p 00002000 00:1d 369658                     /tmp/.tmpSo93UN
+    7ee9eaf85000-7ee9eaf86000 r--p 00002000 00:1d 369658                     /tmp/.tmpSo93UN
+    7ee9eaf86000-7ee9eaf88000 rw-p 00004000 00:1d 369658                     /tmp/.tmpSo93UN
+    7ee9eaf88000-7f09eb788000 rw-p 00000000 00:00 0 
+    7f09eb788000-7f09eb789000 r--p 00000000 00:1d 369764                     /tmp/.tmpo5hteh
+    7f09eb789000-7f09eb78a000 r-xp 00001000 00:1d 369764                     /tmp/.tmpo5hteh
+    7f09eb78a000-7f09eb78b000 r--p 00002000 00:1d 369764                     /tmp/.tmpo5hteh
+    7f09eb78b000-7f09eb78c000 r--p 00002000 00:1d 369764                     /tmp/.tmpo5hteh
+    7f09eb78c000-7f09eb78d000 rw-p 00000000 00:00 0 
+    7f09eb78d000-7f09eb78e000 ---p 00000000 00:00 0 
+    7f09eb78e000-7f09eb794000 rw-p 00000000 00:00 0 
+    7f09eb794000-7f09eb795000 rw-p 00000000 00:00 0 
+    7f09eb795000-7f09eb79b000 rw-p 00000000 00:00 0 
+    7f09eb79b000-7f09eb7ab000 r--p 00000000 00:1e 1595174                    /nix/store/pacbfvpzqz2mksby36awvbcn051zcji3-glibc-2.40-36/lib/libm.so.6
+    7f09eb7ab000-7f09eb826000 r-xp 00010000 00:1e 1595174                    /nix/store/pacbfvpzqz2mksby36awvbcn051zcji3-glibc-2.40-36/lib/libm.so.6
+    7f09eb826000-7f09eb880000 r--p 0008b000 00:1e 1595174                    /nix/store/pacbfvpzqz2mksby36awvbcn051zcji3-glibc-2.40-36/lib/libm.so.6
+    7f09eb880000-7f09eb881000 r--p 000e5000 00:1e 1595174                    /nix/store/pacbfvpzqz2mksby36awvbcn051zcji3-glibc-2.40-36/lib/libm.so.6
+    7f09eb881000-7f09eb882000 rw-p 000e6000 00:1e 1595174                    /nix/store/pacbfvpzqz2mksby36awvbcn051zcji3-glibc-2.40-36/lib/libm.so.6
+    7f09eb882000-7f09eb8aa000 r--p 00000000 00:1e 1595160                    /nix/store/pacbfvpzqz2mksby36awvbcn051zcji3-glibc-2.40-36/lib/libc.so.6
+    7f09eb8aa000-7f09eba12000 r-xp 00028000 00:1e 1595160                    /nix/store/pacbfvpzqz2mksby36awvbcn051zcji3-glibc-2.40-36/lib/libc.so.6
+    7f09eba12000-7f09eba68000 r--p 00190000 00:1e 1595160                    /nix/store/pacbfvpzqz2mksby36awvbcn051zcji3-glibc-2.40-36/lib/libc.so.6
+    7f09eba68000-7f09eba6c000 r--p 001e5000 00:1e 1595160                    /nix/store/pacbfvpzqz2mksby36awvbcn051zcji3-glibc-2.40-36/lib/libc.so.6
+    7f09eba6c000-7f09eba6e000 rw-p 001e9000 00:1e 1595160                    /nix/store/pacbfvpzqz2mksby36awvbcn051zcji3-glibc-2.40-36/lib/libc.so.6
+    7f09eba6e000-7f09eba7d000 rw-p 00000000 00:00 0 
+    7f09eba7d000-7f09eba81000 r--p 00000000 00:1e 1454444                    /nix/store/nhdjqagplar2fdrqnrxlab8vg9i36b3d-gcc-13.3.0-libgcc/lib/libgcc_s.so.1
+    7f09eba81000-7f09eba9c000 r-xp 00004000 00:1e 1454444                    /nix/store/nhdjqagplar2fdrqnrxlab8vg9i36b3d-gcc-13.3.0-libgcc/lib/libgcc_s.so.1
+    7f09eba9c000-7f09ebaa0000 r--p 0001f000 00:1e 1454444                    /nix/store/nhdjqagplar2fdrqnrxlab8vg9i36b3d-gcc-13.3.0-libgcc/lib/libgcc_s.so.1
+    7f09ebaa0000-7f09ebaa1000 r--p 00022000 00:1e 1454444                    /nix/store/nhdjqagplar2fdrqnrxlab8vg9i36b3d-gcc-13.3.0-libgcc/lib/libgcc_s.so.1
+    7f09ebaa1000-7f09ebaa2000 rw-p 00023000 00:1e 1454444                    /nix/store/nhdjqagplar2fdrqnrxlab8vg9i36b3d-gcc-13.3.0-libgcc/lib/libgcc_s.so.1
+    7f09ebaa2000-7f09ebb46000 r--p 00000000 00:1e 1619530                    /nix/store/97f3gw9vpyxvwjv2i673isvg92q65mwn-gcc-13.3.0-lib/lib/libstdc++.so.6.0.32
+    7f09ebb46000-7f09ebc65000 r-xp 000a4000 00:1e 1619530                    /nix/store/97f3gw9vpyxvwjv2i673isvg92q65mwn-gcc-13.3.0-lib/lib/libstdc++.so.6.0.32
+    7f09ebc65000-7f09ebcf2000 r--p 001c3000 00:1e 1619530                    /nix/store/97f3gw9vpyxvwjv2i673isvg92q65mwn-gcc-13.3.0-lib/lib/libstdc++.so.6.0.32
+    7f09ebcf2000-7f09ebcff000 r--p 00250000 00:1e 1619530                    /nix/store/97f3gw9vpyxvwjv2i673isvg92q65mwn-gcc-13.3.0-lib/lib/libstdc++.so.6.0.32
+    7f09ebcff000-7f09ebd00000 rw-p 0025d000 00:1e 1619530                    /nix/store/97f3gw9vpyxvwjv2i673isvg92q65mwn-gcc-13.3.0-lib/lib/libstdc++.so.6.0.32
+    7f09ebd00000-7f09ebd06000 rw-p 00000000 00:00 0 
+    7f09ebd06000-7f09ebd07000 r--p 00000000 00:1e 1595148                    /nix/store/pacbfvpzqz2mksby36awvbcn051zcji3-glibc-2.40-36/lib/ld-linux-x86-64.so.2
+    7f09ebd07000-7f09ebd30000 r-xp 00001000 00:1e 1595148                    /nix/store/pacbfvpzqz2mksby36awvbcn051zcji3-glibc-2.40-36/lib/ld-linux-x86-64.so.2
+    7f09ebd30000-7f09ebd3b000 r--p 0002a000 00:1e 1595148                    /nix/store/pacbfvpzqz2mksby36awvbcn051zcji3-glibc-2.40-36/lib/ld-linux-x86-64.so.2
+    7f09ebd3b000-7f09ebd3d000 r--p 00035000 00:1e 1595148                    /nix/store/pacbfvpzqz2mksby36awvbcn051zcji3-glibc-2.40-36/lib/ld-linux-x86-64.so.2
+    7f09ebd3d000-7f09ebd3f000 rw-p 00037000 00:1e 1595148                    /nix/store/pacbfvpzqz2mksby36awvbcn051zcji3-glibc-2.40-36/lib/ld-linux-x86-64.so.2
+    7ffe77457000-7ffe77488000 rw-p 00000000 00:00 0                          [stack]
+    7ffe774eb000-7ffe774ef000 r--p 00000000 00:00 0                          [vvar]
+    7ffe774ef000-7ffe774f1000 r-xp 00000000 00:00 0                          [vdso]
+    ffffffffff600000-ffffffffff601000 --xp 00000000 00:00 0                  [vsyscall]
+    
+[2024-11-23T18:20:15Z TRACE encapfn_mpk] pkey_mprotect(0x7ee9ea15b000, 163840, 1, pkey = 4) // library LinkMapEntry { addr: 0x7ee9ea15b000, name: "/nix/store/pacbfvpzqz2mksby36awvbcn051zcji3-glibc-2.40-36/lib/libc.so.6" }, region [0x7ee9ea15b000, 0x7ee9ea183000)
+[2024-11-23T18:20:15Z TRACE encapfn_mpk] pkey_mprotect(0x7ee9ea183000, 1474560, 5, pkey = 4) // library LinkMapEntry { addr: 0x7ee9ea15b000, name: "/nix/store/pacbfvpzqz2mksby36awvbcn051zcji3-glibc-2.40-36/lib/libc.so.6" }, region [0x7ee9ea183000, 0x7ee9ea2eb000)
+[2024-11-23T18:20:15Z TRACE encapfn_mpk] pkey_mprotect(0x7ee9ea2eb000, 352256, 1, pkey = 4) // library LinkMapEntry { addr: 0x7ee9ea15b000, name: "/nix/store/pacbfvpzqz2mksby36awvbcn051zcji3-glibc-2.40-36/lib/libc.so.6" }, region [0x7ee9ea2eb000, 0x7ee9ea341000)
+[2024-11-23T18:20:15Z TRACE encapfn_mpk] pkey_mprotect(0x7ee9ea341000, 16384, 1, pkey = 4) // library LinkMapEntry { addr: 0x7ee9ea15b000, name: "/nix/store/pacbfvpzqz2mksby36awvbcn051zcji3-glibc-2.40-36/lib/libc.so.6" }, region [0x7ee9ea341000, 0x7ee9ea345000)
+[2024-11-23T18:20:15Z TRACE encapfn_mpk] pkey_mprotect(0x7ee9ea345000, 8192, 3, pkey = 4) // library LinkMapEntry { addr: 0x7ee9ea15b000, name: "/nix/store/pacbfvpzqz2mksby36awvbcn051zcji3-glibc-2.40-36/lib/libc.so.6" }, region [0x7ee9ea345000, 0x7ee9ea347000)
+[2024-11-23T18:20:15Z TRACE encapfn_mpk] pkey_mprotect(0x7ee9ea347000, 53248, 3, pkey = 4) // library LinkMapEntry { addr: 0x7ee9ea15b000, name: "/nix/store/pacbfvpzqz2mksby36awvbcn051zcji3-glibc-2.40-36/lib/libc.so.6" }, region [0x7ee9ea347000, 0x7ee9ea354000)
+[2024-11-23T18:20:15Z TRACE encapfn_mpk] pkey_mprotect(0x7ee9ea354000, 12288, 1, pkey = 4) // library LinkMapEntry { addr: 0x7ee9ea354000, name: "/nix/store/3qli0xs18rqgi49jwjsqkny6ly06swqg-llhttp-9.2.1/lib/libllhttp.so" }, region [0x7ee9ea354000, 0x7ee9ea357000)
+[2024-11-23T18:20:15Z TRACE encapfn_mpk] pkey_mprotect(0x7ee9ea357000, 36864, 5, pkey = 4) // library LinkMapEntry { addr: 0x7ee9ea354000, name: "/nix/store/3qli0xs18rqgi49jwjsqkny6ly06swqg-llhttp-9.2.1/lib/libllhttp.so" }, region [0x7ee9ea357000, 0x7ee9ea360000)
+[2024-11-23T18:20:15Z TRACE encapfn_mpk] pkey_mprotect(0x7ee9ea360000, 20480, 1, pkey = 4) // library LinkMapEntry { addr: 0x7ee9ea354000, name: "/nix/store/3qli0xs18rqgi49jwjsqkny6ly06swqg-llhttp-9.2.1/lib/libllhttp.so" }, region [0x7ee9ea360000, 0x7ee9ea365000)
+[2024-11-23T18:20:15Z TRACE encapfn_mpk] pkey_mprotect(0x7ee9ea365000, 4096, 1, pkey = 4) // library LinkMapEntry { addr: 0x7ee9ea354000, name: "/nix/store/3qli0xs18rqgi49jwjsqkny6ly06swqg-llhttp-9.2.1/lib/libllhttp.so" }, region [0x7ee9ea365000, 0x7ee9ea366000)
+[2024-11-23T18:20:15Z TRACE encapfn_mpk] pkey_mprotect(0x7ee9ea366000, 4096, 3, pkey = 4) // library LinkMapEntry { addr: 0x7ee9ea354000, name: "/nix/store/3qli0xs18rqgi49jwjsqkny6ly06swqg-llhttp-9.2.1/lib/libllhttp.so" }, region [0x7ee9ea366000, 0x7ee9ea367000)
+[2024-11-23T18:20:15Z TRACE encapfn_mpk] pkey_mprotect(0x7ee9ea367000, 4096, 1, pkey = 4) // library LinkMapEntry { addr: 0x7ee9ea367000, name: "/tmp/.tmpopYxaE" }, region [0x7ee9ea367000, 0x7ee9ea368000)
+[2024-11-23T18:20:15Z TRACE encapfn_mpk] pkey_mprotect(0x7ee9ea368000, 4096, 5, pkey = 4) // library LinkMapEntry { addr: 0x7ee9ea367000, name: "/tmp/.tmpopYxaE" }, region [0x7ee9ea368000, 0x7ee9ea369000)
+[2024-11-23T18:20:15Z TRACE encapfn_mpk] pkey_mprotect(0x7ee9ea369000, 4096, 1, pkey = 4) // library LinkMapEntry { addr: 0x7ee9ea367000, name: "/tmp/.tmpopYxaE" }, region [0x7ee9ea369000, 0x7ee9ea36a000)
+[2024-11-23T18:20:15Z TRACE encapfn_mpk] pkey_mprotect(0x7ee9ea36a000, 4096, 1, pkey = 4) // library LinkMapEntry { addr: 0x7ee9ea367000, name: "/tmp/.tmpopYxaE" }, region [0x7ee9ea36a000, 0x7ee9ea36b000)
+[2024-11-23T18:20:15Z TRACE encapfn_mpk] pkey_mprotect(0x7ee9ea36b000, 8192, 3, pkey = 4) // library LinkMapEntry { addr: 0x7ee9ea367000, name: "/tmp/.tmpopYxaE" }, region [0x7ee9ea36b000, 0x7ee9ea36d000)
+[2024-11-23T18:20:15Z WARN  encapfn_mpk] DROPPING pkey_mprotect(0x7ee9ea36d000, 8388608, 3, pkey = 4), already protected! (requested purpose: library LinkMapEntry { addr: 0x7ee9ea367000, name: "/tmp/.tmpopYxaE" }, region [0x7ee9ea36d000, 0x7ee9eab6d000))
+[2024-11-23T18:20:15Z TRACE encapfn_mpk] pkey_mprotect(0x7ee9eab6d000, 4096, 1, pkey = 4) // library LinkMapEntry { addr: 0x7ee9eab6d000, name: "/tmp/.tmpzRc7o2" }, region [0x7ee9eab6d000, 0x7ee9eab6e000)
+[2024-11-23T18:20:15Z TRACE encapfn_mpk] pkey_mprotect(0x7ee9eab6e000, 4096, 5, pkey = 4) // library LinkMapEntry { addr: 0x7ee9eab6d000, name: "/tmp/.tmpzRc7o2" }, region [0x7ee9eab6e000, 0x7ee9eab6f000)
+[2024-11-23T18:20:15Z TRACE encapfn_mpk] pkey_mprotect(0x7ee9eab6f000, 4096, 1, pkey = 4) // library LinkMapEntry { addr: 0x7ee9eab6d000, name: "/tmp/.tmpzRc7o2" }, region [0x7ee9eab6f000, 0x7ee9eab70000)
+[2024-11-23T18:20:15Z TRACE encapfn_mpk] pkey_mprotect(0x7ee9eab70000, 4096, 1, pkey = 4) // library LinkMapEntry { addr: 0x7ee9eab6d000, name: "/tmp/.tmpzRc7o2" }, region [0x7ee9eab70000, 0x7ee9eab71000)
+[2024-11-23T18:20:15Z TRACE encapfn_mpk] pkey_mprotect(0x7ee9eab71000, 4096, 3, pkey = 4) // library LinkMapEntry { addr: 0x7ee9eab6d000, name: "/tmp/.tmpzRc7o2" }, region [0x7ee9eab71000, 0x7ee9eab72000)
+[2024-11-23T18:20:15Z TRACE encapfn_mpk] pkey_mprotect(0x7ee9eab72000, 4096, 0, pkey = 4) // library LinkMapEntry { addr: 0x7ee9eab6d000, name: "/tmp/.tmpzRc7o2" }, region [0x7ee9eab72000, 0x7ee9eab73000)
+[2024-11-23T18:20:15Z TRACE encapfn_mpk] pkey_mprotect(0x7ee9eab73000, 8192, 3, pkey = 4) // library LinkMapEntry { addr: 0x7ee9eab6d000, name: "/tmp/.tmpzRc7o2" }, region [0x7ee9eab73000, 0x7ee9eab75000)
+[2024-11-23T18:20:15Z TRACE encapfn_mpk] pkey_mprotect(0x7ee9eab75000, 4096, 0, pkey = 4) // library LinkMapEntry { addr: 0x7ee9eab6d000, name: "/tmp/.tmpzRc7o2" }, region [0x7ee9eab75000, 0x7ee9eab76000)
+[2024-11-23T18:20:15Z TRACE encapfn_mpk] pkey_mprotect(0x7ee9eab76000, 2097152, 3, pkey = 4) // library LinkMapEntry { addr: 0x7ee9eab6d000, name: "/tmp/.tmpzRc7o2" }, region [0x7ee9eab76000, 0x7ee9ead76000)
+[2024-11-23T18:20:15Z WARN  encapfn_mpk] DROPPING pkey_mprotect(0x7f09ebd06000, 4096, 1, pkey = 1), already protected! (requested purpose: global ro library LinkMapEntry { addr: 0x7f09ebd06000, name: "/nix/store/pacbfvpzqz2mksby36awvbcn051zcji3-glibc-2.40-36/lib/ld-linux-x86-64.so.2" }, region [0x7f09ebd06000, 0x7f09ebd07000))
+[2024-11-23T18:20:15Z WARN  encapfn_mpk] DROPPING pkey_mprotect(0x7f09ebd07000, 167936, 5, pkey = 1), already protected! (requested purpose: global ro library LinkMapEntry { addr: 0x7f09ebd06000, name: "/nix/store/pacbfvpzqz2mksby36awvbcn051zcji3-glibc-2.40-36/lib/ld-linux-x86-64.so.2" }, region [0x7f09ebd07000, 0x7f09ebd30000))
+[2024-11-23T18:20:15Z WARN  encapfn_mpk] DROPPING pkey_mprotect(0x7f09ebd30000, 45056, 1, pkey = 1), already protected! (requested purpose: global ro library LinkMapEntry { addr: 0x7f09ebd06000, name: "/nix/store/pacbfvpzqz2mksby36awvbcn051zcji3-glibc-2.40-36/lib/ld-linux-x86-64.so.2" }, region [0x7f09ebd30000, 0x7f09ebd3b000))
+[2024-11-23T18:20:15Z WARN  encapfn_mpk] DROPPING pkey_mprotect(0x7f09ebd3b000, 8192, 1, pkey = 1), already protected! (requested purpose: global ro library LinkMapEntry { addr: 0x7f09ebd06000, name: "/nix/store/pacbfvpzqz2mksby36awvbcn051zcji3-glibc-2.40-36/lib/ld-linux-x86-64.so.2" }, region [0x7f09ebd3b000, 0x7f09ebd3d000))
+[2024-11-23T18:20:15Z WARN  encapfn_mpk] DROPPING pkey_mprotect(0x7f09ebd3d000, 8192, 3, pkey = 1), already protected! (requested purpose: global ro library LinkMapEntry { addr: 0x7f09ebd06000, name: "/nix/store/pacbfvpzqz2mksby36awvbcn051zcji3-glibc-2.40-36/lib/ld-linux-x86-64.so.2" }, region [0x7f09ebd3d000, 0x7f09ebd3f000))
+[2024-11-23T18:20:15Z WARN  encapfn_mpk] DROPPING pkey_mprotect(0x7ffe774ef000, 8192, 5, pkey = 2), already protected! (requested purpose: vDSO)
+[2024-11-23T18:20:15Z DEBUG encapfn_mpk] EncapfnMPKRt[#1]: Assigned PKEYs to memory regions: {
+        4: [
+            (
+                0x00007ee9ea36d000..0x00007ee9eab6d000,
+                "Foreign Stack",
+            ),
+            (
+                0x00007ec9e4000000..0x00007ee9e4000000,
+                "Foreign Heap",
+            ),
+            (
+                0x00007ee9ea15b000..0x00007ee9ea183000,
+                "Foreign Library \"/nix/store/pacbfvpzqz2mksby36awvbcn051zcji3-glibc-2.40-36/lib/libc.so.6\"",
+            ),
+            (
+                0x00007ee9ea183000..0x00007ee9ea2eb000,
+                "Foreign Library \"/nix/store/pacbfvpzqz2mksby36awvbcn051zcji3-glibc-2.40-36/lib/libc.so.6\"",
+            ),
+            (
+                0x00007ee9ea2eb000..0x00007ee9ea341000,
+                "Foreign Library \"/nix/store/pacbfvpzqz2mksby36awvbcn051zcji3-glibc-2.40-36/lib/libc.so.6\"",
+            ),
+            (
+                0x00007ee9ea341000..0x00007ee9ea345000,
+                "Foreign Library \"/nix/store/pacbfvpzqz2mksby36awvbcn051zcji3-glibc-2.40-36/lib/libc.so.6\"",
+            ),
+            (
+                0x00007ee9ea345000..0x00007ee9ea347000,
+                "Foreign Library \"/nix/store/pacbfvpzqz2mksby36awvbcn051zcji3-glibc-2.40-36/lib/libc.so.6\"",
+            ),
+            (
+                0x00007ee9ea347000..0x00007ee9ea354000,
+                "Foreign Library \"/nix/store/pacbfvpzqz2mksby36awvbcn051zcji3-glibc-2.40-36/lib/libc.so.6\"",
+            ),
+            (
+                0x00007ee9ea354000..0x00007ee9ea357000,
+                "Foreign Library \"/nix/store/3qli0xs18rqgi49jwjsqkny6ly06swqg-llhttp-9.2.1/lib/libllhttp.so\"",
+            ),
+            (
+                0x00007ee9ea357000..0x00007ee9ea360000,
+                "Foreign Library \"/nix/store/3qli0xs18rqgi49jwjsqkny6ly06swqg-llhttp-9.2.1/lib/libllhttp.so\"",
+            ),
+            (
+                0x00007ee9ea360000..0x00007ee9ea365000,
+                "Foreign Library \"/nix/store/3qli0xs18rqgi49jwjsqkny6ly06swqg-llhttp-9.2.1/lib/libllhttp.so\"",
+            ),
+            (
+                0x00007ee9ea365000..0x00007ee9ea366000,
+                "Foreign Library \"/nix/store/3qli0xs18rqgi49jwjsqkny6ly06swqg-llhttp-9.2.1/lib/libllhttp.so\"",
+            ),
+            (
+                0x00007ee9ea366000..0x00007ee9ea367000,
+                "Foreign Library \"/nix/store/3qli0xs18rqgi49jwjsqkny6ly06swqg-llhttp-9.2.1/lib/libllhttp.so\"",
+            ),
+            (
+                0x00007ee9ea367000..0x00007ee9ea368000,
+                "Foreign Library \"/tmp/.tmpopYxaE\"",
+            ),
+            (
+                0x00007ee9ea368000..0x00007ee9ea369000,
+                "Foreign Library \"/tmp/.tmpopYxaE\"",
+            ),
+            (
+                0x00007ee9ea369000..0x00007ee9ea36a000,
+                "Foreign Library \"/tmp/.tmpopYxaE\"",
+            ),
+            (
+                0x00007ee9ea36a000..0x00007ee9ea36b000,
+                "Foreign Library \"/tmp/.tmpopYxaE\"",
+            ),
+            (
+                0x00007ee9ea36b000..0x00007ee9ea36d000,
+                "Foreign Library \"/tmp/.tmpopYxaE\"",
+            ),
+            (
+                0x00007ee9ea36d000..0x00007ee9eab6d000,
+                "Foreign Library \"/tmp/.tmpopYxaE\"",
+            ),
+            (
+                0x00007ee9eab6d000..0x00007ee9eab6e000,
+                "Foreign Library \"/tmp/.tmpzRc7o2\"",
+            ),
+            (
+                0x00007ee9eab6e000..0x00007ee9eab6f000,
+                "Foreign Library \"/tmp/.tmpzRc7o2\"",
+            ),
+            (
+                0x00007ee9eab6f000..0x00007ee9eab70000,
+                "Foreign Library \"/tmp/.tmpzRc7o2\"",
+            ),
+            (
+                0x00007ee9eab70000..0x00007ee9eab71000,
+                "Foreign Library \"/tmp/.tmpzRc7o2\"",
+            ),
+            (
+                0x00007ee9eab71000..0x00007ee9eab72000,
+                "Foreign Library \"/tmp/.tmpzRc7o2\"",
+            ),
+            (
+                0x00007ee9eab72000..0x00007ee9eab73000,
+                "Foreign Library \"/tmp/.tmpzRc7o2\"",
+            ),
+            (
+                0x00007ee9eab73000..0x00007ee9eab75000,
+                "Foreign Library \"/tmp/.tmpzRc7o2\"",
+            ),
+            (
+                0x00007ee9eab75000..0x00007ee9eab76000,
+                "Foreign Library \"/tmp/.tmpzRc7o2\"",
+            ),
+            (
+                0x00007ee9eab76000..0x00007ee9ead76000,
+                "Foreign Library \"/tmp/.tmpzRc7o2\"",
+            ),
+        ],
+        1: [
+            (
+                0x00007f09ebd06000..0x00007f09ebd07000,
+                "Common Library \"/nix/store/pacbfvpzqz2mksby36awvbcn051zcji3-glibc-2.40-36/lib/ld-linux-x86-64.so.2\"",
+            ),
+            (
+                0x00007f09ebd07000..0x00007f09ebd30000,
+                "Common Library \"/nix/store/pacbfvpzqz2mksby36awvbcn051zcji3-glibc-2.40-36/lib/ld-linux-x86-64.so.2\"",
+            ),
+            (
+                0x00007f09ebd30000..0x00007f09ebd3b000,
+                "Common Library \"/nix/store/pacbfvpzqz2mksby36awvbcn051zcji3-glibc-2.40-36/lib/ld-linux-x86-64.so.2\"",
+            ),
+            (
+                0x00007f09ebd3b000..0x00007f09ebd3d000,
+                "Common Library \"/nix/store/pacbfvpzqz2mksby36awvbcn051zcji3-glibc-2.40-36/lib/ld-linux-x86-64.so.2\"",
+            ),
+            (
+                0x00007f09ebd3d000..0x00007f09ebd3f000,
+                "Common Library \"/nix/store/pacbfvpzqz2mksby36awvbcn051zcji3-glibc-2.40-36/lib/ld-linux-x86-64.so.2\"",
+            ),
+        ],
+        2: [
+            (
+                0x00007ffe774ef000..0x00007ffe774f1000,
+                "vDSO",
+            ),
+        ],
+    }
+[2024-11-23T18:20:15Z DEBUG encapfn_mpk] EncapfnMPKRt[#1]: Runtime initialized!
+[pid 1887492] --- SIGSEGV {si_signo=SIGSEGV, si_code=SEGV_PKUERR, si_addr=0x7f09eb794008, si_pkey=1} ---
+[pid 1887492] --- SIGSEGV {si_signo=SIGSEGV, si_code=SI_KERNEL, si_addr=NULL} ---
+[pid 1887493] +++ killed by SIGSEGV +++
++++ killed by SIGSEGV +++

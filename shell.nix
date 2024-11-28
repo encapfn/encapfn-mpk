@@ -37,6 +37,9 @@ in
 
       # Development tools:
       gdb
+
+      # Dependencies of criterion for benchmarks:
+      gnuplot
     ];
 
     shellHook = ''

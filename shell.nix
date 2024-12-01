@@ -31,6 +31,8 @@ in
       # Dependencies of the OpenBLAS test:
       openblas
 
+      # Dependencies of the libpng example:
+      libpng
 
       # Dependencies for building Tock and the EF bindings / libraries in there:
       clang llvm qemu

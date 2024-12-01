@@ -4,10 +4,9 @@ use std::ptr;
 
 use crate::libpng_bindings::{
     jmp_buf, longjmp, png_create_info_struct, png_create_read_struct, png_destroy_read_struct,
-    png_get_image_height, png_get_io_ptr, png_get_rowbytes, png_info, png_read_image,
-    png_read_info, png_set_longjmp_fn, png_set_read_fn, png_sig_cmp, png_size_t, png_struct,
-    png_get_image_width, png_read_end,
-    setjmp,
+    png_get_image_height, png_get_image_width, png_get_io_ptr, png_get_rowbytes, png_info,
+    png_read_end, png_read_image, png_read_info, png_set_longjmp_fn, png_set_read_fn, png_sig_cmp,
+    png_size_t, png_struct, setjmp,
 };
 
 static mut PNG_PTR: *mut png_struct = 0 as *mut png_struct;
@@ -75,6 +74,61 @@ fn decode_png(png_image: &[u8]) -> Result<Vec<Vec<u8>>, String> {
 }
 
 #[allow(unused)]
+pub unsafe fn decode_png_preallocated<'a>(
+    png_image: &[u8],
+    preallocated: &'a mut [u8],
+) -> &'a mut [*mut u8] {
+    // this call mimics the define in png.h:
+    // # define png_jmpbuf(png_ptr) \
+    // (*png_set_longjmp_fn((png_ptr), longjmp, (sizeof (jmp_buf))))
+    if 0 != setjmp(png_set_longjmp_fn(
+        PNG_PTR,
+        Some(std::mem::transmute::<
+            unsafe extern "C" fn(_, _) -> !,
+            unsafe extern "C" fn(_, _) -> (),
+        >(longjmp)),
+        std::mem::size_of::<jmp_buf>(),
+    ) as *mut _)
+    {
+        panic!("read failed in libpng");
+    }
+
+    let image_ptr: *mut c_void = &png_image as *const &[u8] as *const _ as *mut _;
+    png_set_read_fn(PNG_PTR, image_ptr, Some(callback));
+
+    png_read_info(PNG_PTR, INFO_PTR);
+    let row_count = png_get_image_height(PNG_PTR, INFO_PTR) as usize;
+    let col_bytes = png_get_rowbytes(PNG_PTR, INFO_PTR) as usize;
+
+    // Allocate a stacked buffer large enough to hold all columns of all
+    // rows, plus a "row" of pointers to the other rows:
+    let alloc_size = row_count * col_bytes + row_count * std::mem::size_of::<*mut *mut u8>();
+
+    assert!(
+        preallocated.len() >= alloc_size,
+        "Provided buffer is too small to decode image into!"
+    );
+
+    // Use pointer arithmetic, for a fair comparison with the EF MPK benchmark:
+    let dst_buffer: *mut u8 = preallocated.as_mut_ptr();
+
+    let row_pointers_arr =
+        dst_buffer.byte_offset((row_count * col_bytes).try_into().unwrap()) as *mut *mut u8;
+    let row_pointers_slice: &mut [*mut u8] =
+        std::slice::from_raw_parts_mut(row_pointers_arr, row_count);
+    row_pointers_slice
+        .iter_mut()
+        .enumerate()
+        .for_each(|(row_idx, ptr_ref)| {
+            *ptr_ref = dst_buffer.byte_offset((row_idx * col_bytes).try_into().unwrap());
+        });
+
+    png_read_image(PNG_PTR, row_pointers_slice.as_mut_ptr());
+
+    row_pointers_slice
+}
+
+#[allow(unused)]
 fn decode_png_c_wrapped(png_image: &[u8]) -> Result<Vec<Vec<u8>>, String> {
     let mut rows: u32 = 0;
     let mut cols: u32 = 0;
@@ -108,25 +162,28 @@ fn decode_png_c_wrapped(png_image: &[u8]) -> Result<Vec<Vec<u8>>, String> {
     Ok(result_vec)
 }
 
-pub fn png_init() -> Result<(), String> {
-    unsafe {
-        // for now, duplication is necessary
-        // https://stackoverflow.com/questions/21485655/how-do-i-use-c-preprocessor-macros-with-rusts-ffi
-        let ver = std::ffi::CString::new("1.6.28").unwrap();
-        let ver_ptr = ver.as_ptr();
+pub unsafe fn png_init() -> Result<(), String> {
+    // for now, duplication is necessary
+    // https://stackoverflow.com/questions/21485655/how-do-i-use-c-preprocessor-macros-with-rusts-ffi
+    let ver = std::ffi::CString::new("1.6.28").unwrap();
+    let ver_ptr = ver.as_ptr();
 
-        PNG_PTR = png_create_read_struct(ver_ptr, ptr::null_mut(), None, None);
-        if PNG_PTR.is_null() {
-            return Err("failed to create png_ptr".to_owned());
-        }
-        INFO_PTR = png_create_info_struct(PNG_PTR);
-        if INFO_PTR.is_null() {
-            png_destroy_read_struct(&raw mut PNG_PTR, ptr::null_mut(), ptr::null_mut());
-
-            return Err("failed to create info_ptr".to_owned());
-        }
+    PNG_PTR = png_create_read_struct(ver_ptr, ptr::null_mut(), None, None);
+    if PNG_PTR.is_null() {
+        return Err("failed to create png_ptr".to_owned());
     }
+    INFO_PTR = png_create_info_struct(PNG_PTR);
+    if INFO_PTR.is_null() {
+        png_destroy_read_struct(&raw mut PNG_PTR, ptr::null_mut(), ptr::null_mut());
+
+        return Err("failed to create info_ptr".to_owned());
+    }
+
     return Ok(());
+}
+
+pub unsafe fn png_destroy() {
+    png_destroy_read_struct(&raw mut PNG_PTR, &raw mut INFO_PTR, std::ptr::null_mut());
 }
 
 fn is_png(buf: &[u8]) -> bool {
@@ -140,7 +197,7 @@ fn is_png(buf: &[u8]) -> bool {
     return true;
 }
 
-pub fn unsafe_main() {
+pub unsafe fn unsafe_main() {
     if let Some(arg1) = std::env::args().nth(1) {
         let file_buf = read_file(&arg1.as_str());
         if !is_png(&file_buf[0..8]) {
@@ -156,11 +213,10 @@ pub fn unsafe_main() {
     }
 }
 
-pub fn get_decompressed_image_buffer_size(png_image: &[u8]) -> (usize, usize, usize) {
+pub unsafe fn get_decompressed_image_buffer_size(png_image: &[u8]) -> (usize, usize, usize) {
     if !is_png(&png_image[0..8]) {
         panic!("Supplied image is not a valid PNG file!");
     }
-
 
     unsafe {
         // this call mimics the define in png.h:
@@ -171,7 +227,7 @@ pub fn get_decompressed_image_buffer_size(png_image: &[u8]) -> (usize, usize, us
             Some(std::mem::transmute::<
                 unsafe extern "C" fn(_, _) -> !,
                 unsafe extern "C" fn(_, _) -> (),
-		>(longjmp)),
+            >(longjmp)),
             std::mem::size_of::<jmp_buf>(),
         ) as *mut _)
         {
@@ -183,11 +239,13 @@ pub fn get_decompressed_image_buffer_size(png_image: &[u8]) -> (usize, usize, us
 
         png_read_info(PNG_PTR, INFO_PTR);
         let row_count = png_get_image_height(PNG_PTR, INFO_PTR) as usize;
-	let col_count = png_get_image_width(PNG_PTR, INFO_PTR) as usize;
+        let col_count = png_get_image_width(PNG_PTR, INFO_PTR) as usize;
         let col_bytes = png_get_rowbytes(PNG_PTR, INFO_PTR) as usize;
 
-	png_read_end(PNG_PTR, std::ptr::null_mut());
-
-	(row_count, col_count, row_count * col_bytes + row_count * std::mem::size_of::<*mut *mut u8>())
+        (
+            row_count,
+            col_count,
+            row_count * col_bytes + row_count * std::mem::size_of::<*mut *mut u8>(),
+        )
     }
 }

@@ -70,6 +70,41 @@ pub fn libpng_init<ID: EFID, RT: EncapfnRt<ID = ID>, L: LibPng<ID, RT, RT = RT>>
     (png_ptr, info_ptr)
 }
 
+pub fn libpng_destroy<ID: EFID, RT: EncapfnRt<ID = ID>, L: LibPng<ID, RT, RT = RT>>(
+    lib: &L,
+    alloc: &mut AllocScope<RT::AllocTracker<'_>, RT::ID>,
+    access: &mut AccessScope<RT::ID>,
+    png_ptr: *mut png_struct,
+    info_ptr: *mut png_info,
+) {
+    lib.rt()
+        .write_stacked_t_mut::<*mut png_struct, _, _>(
+            png_ptr,
+            alloc,
+            access,
+            |png_ptrptr, alloc, access| {
+                lib.rt()
+                    .write_stacked_t_mut::<*mut png_info, _, _>(
+                        info_ptr,
+                        alloc,
+                        access,
+                        |info_ptrptr, alloc, access| {
+                            lib.png_destroy_read_struct(
+                                png_ptrptr.as_ptr().into(),
+                                info_ptrptr.as_ptr().into(),
+                                std::ptr::null_mut(),
+                                alloc,
+                                access,
+                            )
+                            .unwrap()
+                        },
+                    )
+                    .unwrap()
+            },
+        )
+        .unwrap();
+}
+
 pub fn is_png<ID: EFID, RT: EncapfnRt<ID = ID>, L: LibPng<ID, RT, RT = RT>>(
     lib: &L,
     alloc: &mut AllocScope<RT::AllocTracker<'_>, RT::ID>,
@@ -101,6 +136,7 @@ pub fn decode_png<ID: EFID, RT: EncapfnRt<ID = ID>, L: LibPng<ID, RT, RT = RT>, 
     png_ptr: *mut png_struct,
     info_ptr: *mut png_info,
     png_image: &[u8],
+    dst_buffer: Option<(*mut u8, usize)>,
     f: impl for<'a> FnOnce(
         EFMutSlice<'_, RT::ID, *mut u8>,
         usize,
@@ -131,7 +167,7 @@ pub fn decode_png<ID: EFID, RT: EncapfnRt<ID = ID>, L: LibPng<ID, RT, RT = RT>, 
                     access,
                 );
                 png_image_offset += count;
-                println!("Copied {} bytes!", count);
+                // println!("Copied {} bytes!", count);
             },
             alloc,
             |callback_ptr, alloc| {
@@ -173,32 +209,37 @@ pub fn decode_png<ID: EFID, RT: EncapfnRt<ID = ID>, L: LibPng<ID, RT, RT = RT>, 
                 let alloc_size =
                     row_count * col_bytes + row_count * std::mem::size_of::<*mut *mut u8>();
 
-                // lib.rt().allocate_stacked_slice_mut::<u8, _, _>(alloc_size, alloc, |decoded_image_alloc, alloc| {
-                //     f(unimplemented!(), alloc, access)
-                // }).unwrap()
-
-                let decoded_image_alloc: *mut u8 = lib
-                    .malloc(alloc_size as u64, alloc, access)
-                    .unwrap()
-                    .validate()
-                    .unwrap() as *mut u8;
-                assert!(
-                    !decoded_image_alloc.is_null(),
-                    "Failed to alloc {} bytes for the decompressed image!",
-                    alloc_size
-                );
+                let dst_buffer = if let Some((dst_buffer, dst_buffer_len)) = dst_buffer {
+                    assert!(
+                        dst_buffer_len >= alloc_size,
+                        "Provided buffer is too small to decode image into!"
+                    );
+                    dst_buffer
+                } else {
+                    let dst_buffer: *mut u8 = lib
+                        .malloc(alloc_size as u64, alloc, access)
+                        .unwrap()
+                        .validate()
+                        .unwrap() as *mut u8;
+                    assert!(
+                        !dst_buffer.is_null(),
+                        "Failed to alloc {} bytes for the decompressed image!",
+                        alloc_size
+                    );
+                    dst_buffer
+                };
 
                 // At a pointer offset of `row_count * col_bytes`, prepare an array of
                 // pointers pointing to `base_ptr + i * col_bytes`:
-                let row_pointers_arr = unsafe {
-                    decoded_image_alloc.byte_offset((row_count * col_bytes).try_into().unwrap())
-                } as *mut *mut u8;
+                let row_pointers_arr =
+                    unsafe { dst_buffer.byte_offset((row_count * col_bytes).try_into().unwrap()) }
+                        as *mut *mut u8;
                 let row_pointers_slice = EFPtr::<*mut u8>::from(row_pointers_arr)
                     .upgrade_slice_mut(row_count, alloc)
                     .unwrap();
                 row_pointers_slice.write_from_iter(
                     (0..row_count).map(|row_idx| unsafe {
-                        decoded_image_alloc.byte_offset((row_idx * col_bytes).try_into().unwrap())
+                        dst_buffer.byte_offset((row_idx * col_bytes).try_into().unwrap())
                     }),
                     access,
                 );
@@ -233,6 +274,7 @@ pub fn ef_mpk_main() {
                 png_ptr,
                 info_ptr,
                 &file_buf,
+                None,
                 |decoded_image, _row_count, col_bytes, alloc, access| {
                     let rows = decoded_image.validate(access).unwrap();
                     let col_bytes = EFPtr::from(rows[0])

@@ -27,3 +27,5 @@ fntab_id = 8
 [functions.malloc]
 fntab_id = 9
 
+[functions.png_destroy_read_struct]
+fntab_id = 10

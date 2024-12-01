@@ -25,21 +25,44 @@ fn push_stack_bytes<R>(bytes: usize, f: impl FnOnce() -> R) -> R {
     }
 }
 
-// sandbox! {
-//     fn sodium_init_sandcrust() {
-//         assert!(unsafe { libsodium_bindings::sodium_init() } >= 0);
-//     }
-// }
+use sandcrust::*;
 
-// sandbox! {
-//     fn libsodium_hash_sandcrust(message: &Vec<u8>) -> [u8; 32] {
-//         if SANDCRUST_ASSERT_LIBRARY_PREINITIALIZED {
-//             assert!(unsafe { libsodium_bindings::sodium_init() } == 1);
-//         }
+static mut SANDCRUST_PREALLOCATED_DST_BUF: Option<Vec<usize>> = None;
 
-//         libsodium_hash_unsafe(message.as_slice())
-//     }
-// }
+sandbox! {
+    fn sandcrust_prealloc(preallocate_bytes: usize) {
+        unsafe {
+        SANDCRUST_PREALLOCATED_DST_BUF = Some(vec![0; preallocate_bytes.div_ceil(std::mem::size_of::<usize>())])
+    }
+    }
+}
+
+sandbox! {
+    fn sandcrust_png_init() {
+        unsafe {
+        unsafe_ffi::png_init();
+    }
+    }
+}
+
+sandbox! {
+    fn sandcrust_decode_png_preallocated(png_image: Vec<u8>) -> Vec<u8> {
+        unsafe {
+        let decoded_size = unsafe_ffi::decode_png_preallocated(&png_image, SANDCRUST_PREALLOCATED_DST_BUF.as_mut().unwrap());
+        let prealloc_slice: &[usize] = SANDCRUST_PREALLOCATED_DST_BUF.as_ref().unwrap().as_slice();
+        let decoded_slice: &[u8] = std::slice::from_raw_parts(prealloc_slice.as_ptr()  as *const u8, decoded_size);
+        decoded_slice.into()
+    }
+    }
+}
+
+sandbox! {
+    fn sandcrust_png_destroy() {
+        unsafe {
+        unsafe_ffi::png_destroy();
+    }
+    }
+}
 
 pub fn criterion_benchmark(c: &mut Criterion) {
     env_logger::init();
@@ -115,8 +138,12 @@ pub fn criterion_benchmark(c: &mut Criterion) {
                 .unwrap()
                 .validate()
                 .unwrap() as *mut u8;
+            assert!(ef_mpk_dst_buffer as usize % std::mem::align_of::<*mut u8>() == 0);
 
-            let mut unsafe_dst_buffer = vec![0; max_buffer_size];
+            let mut unsafe_dst_buffer =
+                vec![0; max_buffer_size.div_ceil(std::mem::size_of::<usize>())];
+
+            sandcrust_prealloc(max_buffer_size);
 
             for (test_label, png_image, (rows, cols, buffer_size)) in &test_images {
                 // // Verify that all the functions work:
@@ -204,16 +231,24 @@ pub fn criterion_benchmark(c: &mut Criterion) {
                     },
                 );
 
-                // group.bench_with_input(BenchmarkId::new("sandcrust", size), &size, |b, _| {
-                //     for _ in 0..STACK_RANDOMIZE_ITERS {
-                //         let stack_bytes: usize = (&mut prng)
-                //             .gen_range(std::ops::RangeInclusive::new(1_usize, 4095_usize));
-                //         push_stack_bytes(stack_bytes, || {
-                //             // println!("Pushed {} bytes onto the stack...", stack_bytes);
-                //             b.iter(|| libsodium_hash_sandcrust(black_box(&to_hash)));
-                //         });
-                //     }
-                // });
+                group.bench_with_input(
+                    BenchmarkId::new("sandcrust", test_label),
+                    &png_image.len(),
+                    |b, _| {
+                        for _ in 0..STACK_RANDOMIZE_ITERS {
+                            let stack_bytes: usize = (&mut prng)
+                                .gen_range(std::ops::RangeInclusive::new(1_usize, 4095_usize));
+                            push_stack_bytes(stack_bytes, || {
+                                // println!("Pushed {} bytes onto the stack...", stack_bytes);
+                                b.iter(|| {
+                                    sandcrust_png_init();
+                                    black_box(sandcrust_decode_png_preallocated(png_image.clone()));
+                                    sandcrust_png_destroy();
+                                });
+                            });
+                        }
+                    },
+                );
             }
             group.finish();
         });

@@ -5,8 +5,8 @@ use std::ptr;
 use crate::libpng_bindings::{
     jmp_buf, longjmp, png_create_info_struct, png_create_read_struct, png_destroy_read_struct,
     png_get_image_height, png_get_image_width, png_get_io_ptr, png_get_rowbytes, png_info,
-    png_read_end, png_read_image, png_read_info, png_set_longjmp_fn, png_set_read_fn, png_sig_cmp,
-    png_size_t, png_struct, setjmp,
+    png_read_image, png_read_info, png_set_longjmp_fn, png_set_read_fn, png_sig_cmp, png_size_t,
+    png_struct, setjmp,
 };
 
 static mut PNG_PTR: *mut png_struct = 0 as *mut png_struct;
@@ -76,8 +76,9 @@ fn decode_png(png_image: &[u8]) -> Result<Vec<Vec<u8>>, String> {
 #[allow(unused)]
 pub unsafe fn decode_png_preallocated<'a>(
     png_image: &[u8],
-    preallocated: &'a mut [u8],
-) -> &'a mut [*mut u8] {
+    // We'll be storing pointers in this, so needs to be aligned to 8 bytes
+    preallocated: &mut [usize],
+) -> usize {
     // this call mimics the define in png.h:
     // # define png_jmpbuf(png_ptr) \
     // (*png_set_longjmp_fn((png_ptr), longjmp, (sizeof (jmp_buf))))
@@ -105,12 +106,12 @@ pub unsafe fn decode_png_preallocated<'a>(
     let alloc_size = row_count * col_bytes + row_count * std::mem::size_of::<*mut *mut u8>();
 
     assert!(
-        preallocated.len() >= alloc_size,
+        (preallocated.len() * std::mem::size_of::<usize>()) >= alloc_size,
         "Provided buffer is too small to decode image into!"
     );
 
     // Use pointer arithmetic, for a fair comparison with the EF MPK benchmark:
-    let dst_buffer: *mut u8 = preallocated.as_mut_ptr();
+    let dst_buffer: *mut u8 = preallocated.as_mut_ptr() as *mut u8;
 
     let row_pointers_arr =
         dst_buffer.byte_offset((row_count * col_bytes).try_into().unwrap()) as *mut *mut u8;
@@ -125,7 +126,7 @@ pub unsafe fn decode_png_preallocated<'a>(
 
     png_read_image(PNG_PTR, row_pointers_slice.as_mut_ptr());
 
-    row_pointers_slice
+    alloc_size
 }
 
 #[allow(unused)]

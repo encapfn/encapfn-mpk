@@ -118,7 +118,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
         .max()
         .unwrap();
 
-    const STACK_RANDOMIZE_ITERS: usize = 1;
+    const STACK_RANDOMIZE_ITERS: usize = 3;
     assert!(STACK_RANDOMIZE_ITERS > 0);
 
     let mut prng = SmallRng::seed_from_u64(0xDEADBEEFCAFEBABE);
@@ -154,12 +154,15 @@ pub fn criterion_benchmark(c: &mut Criterion) {
                 //     assert!(&res_unsafe == res_ef);
                 //     assert!(res_unsafe == res_sandcrust);
                 // });
+                
+                // let tput_bytes: u64 = png_image.len() as u64;
+                let tput_bytes: u64 = *buffer_size as u64;
 
-                group.throughput(Throughput::Bytes(png_image.len() as u64));
+                group.throughput(Throughput::Bytes(tput_bytes as u64));
 
                 group.bench_with_input(
                     BenchmarkId::new("unsafe", test_label),
-                    &png_image.len(),
+                    &tput_bytes,
                     |b, _| {
                         for _ in 0..STACK_RANDOMIZE_ITERS {
                             let stack_bytes: usize = (&mut prng)
@@ -185,7 +188,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
 
                 group.bench_with_input(
                     BenchmarkId::new("ef_mpk", test_label),
-                    &png_image.len(),
+                    &tput_bytes,
                     |b, _| {
                         for _ in 0..STACK_RANDOMIZE_ITERS {
                             let stack_bytes: usize = (&mut prng)
@@ -233,7 +236,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
 
                 group.bench_with_input(
                     BenchmarkId::new("sandcrust", test_label),
-                    &png_image.len(),
+                    &tput_bytes,
                     |b, _| {
                         for _ in 0..STACK_RANDOMIZE_ITERS {
                             let stack_bytes: usize = (&mut prng)

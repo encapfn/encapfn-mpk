@@ -1,59 +1,16 @@
 #![feature(naked_functions)]
 
-use clap::{Parser, ValueEnum};
-use encapfn::branding::EFID;
-use encapfn::rt::EncapfnRt;
-use encapfn::types::{AccessScope, AllocScope};
-
-use ef_libsodium_lib::libsodium::LibSodium;
-use ef_libsodium_lib::{
-    calc_hash, calc_hash_unsafe, calc_hash_validate, libsodium_public, libsodium_public_unsafe,
-    libsodium_public_validate, test_libsodium, test_libsodium_unsafe, with_mockrt_lib,
-    with_mpkrt_lib,
-};
-
 use std::fs::File;
-use std::io::prelude::*;
-
+use std::io::Write;
 use std::time::Instant;
 
-#[derive(ValueEnum, Debug, Clone)]
-#[clap(rename_all = "snake_case")]
-enum EFRuntime {
-    Mock,
-    MPK,
-    No,
-}
-
-#[derive(Parser, Debug, Clone)]
-#[command(version, about, long_about = None)]
-struct Args {
-    #[arg(short, long)]
-    runtime: EFRuntime,
-}
-
-#[allow(unused)]
-fn run<ID: EFID, RT: EncapfnRt<ID = ID>, L: LibSodium<ID, RT, RT = RT>>(
-    _args: Args,
-    lib: &L,
-    alloc: &mut AllocScope<RT::AllocTracker<'_>, RT::ID>,
-    access: &mut AccessScope<RT::ID>,
-) {
-    test_libsodium(lib, alloc, access);
-    libsodium_public(lib, alloc, access);
-    println!("Success!")
-}
-
-#[allow(unused)]
-fn run_unsafe() {
-    test_libsodium_unsafe();
-    libsodium_public_unsafe();
-    println!("Success!");
-}
+use ef_libsodium_lib::{
+    calc_hash, calc_hash_unsafe, calc_hash_validate, libsodium_public, libsodium_public_unsafe,
+    libsodium_public_validate, with_mockrt_lib, with_mpkrt_lib,
+};
 
 fn main() {
-    // env_logger::init();
-    // let args = Args::parse();
+    env_logger::init();
 
     let mut file = File::create("sodium_data.out").unwrap();
 

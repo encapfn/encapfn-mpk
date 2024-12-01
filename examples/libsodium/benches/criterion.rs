@@ -1,18 +1,10 @@
 #![feature(naked_functions)]
 
-use std::ptr::null;
-
 use criterion::{criterion_group, criterion_main, Criterion};
 
-use ef_libsodium_lib::libsodium_public_validate;
-use encapfn::branding::EFID;
-use encapfn::rt::EncapfnRt;
-use encapfn::types::{AccessScope, AllocScope, EFPtr};
-
-use ef_libsodium_lib::libsodium::LibSodium;
 use ef_libsodium_lib::{
-    calc_hash, calc_hash_unsafe, calc_hash_validate, libsodium::crypto_generichash,
-    libsodium_public, libsodium_public_unsafe, with_mockrt_lib, with_mpkrt_lib,
+    calc_hash, calc_hash_unsafe, calc_hash_validate, libsodium_public, libsodium_public_unsafe,
+    libsodium_public_validate, with_mockrt_lib, with_mpkrt_lib, with_no_lib,
 };
 
 fn bench_libsodium(c: &mut Criterion) {
@@ -35,6 +27,7 @@ fn bench_libsodium(c: &mut Criterion) {
             });
         });
     });
+
     encapfn::branding::new(|brand| {
         with_mockrt_lib(
             brand,
@@ -53,10 +46,12 @@ fn bench_libsodium(c: &mut Criterion) {
         );
     });
 
-    c.bench_function("unsafe_sodium_hash", |b| b.iter(|| calc_hash_unsafe()));
+    with_no_lib(|| {
+        c.bench_function("unsafe_sodium_hash", |b| b.iter(|| calc_hash_unsafe()));
 
-    c.bench_function("unsafe_sodium_public", |b| {
-        b.iter(|| libsodium_public_unsafe())
+        c.bench_function("unsafe_sodium_public", |b| {
+            b.iter(|| libsodium_public_unsafe())
+        });
     });
 }
 

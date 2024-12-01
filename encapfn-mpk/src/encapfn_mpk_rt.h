@@ -2,7 +2,15 @@
 // the implicit global namespace:
 #include <stddef.h>
 
-size_t ef_callback(size_t id, size_t arg0, size_t arg1, size_t arg2, size_t arg3);
+typedef enum {
+    EF_DEBUG_SUBSYS_INIT = 1,
+    EF_DEBUG_SUBSYS_ALLOC = 2,
+} ef_debug_subsys_t;
+
+size_t ef_debug_callback(ef_debug_subsys_t subsys, size_t a1, size_t a2, size_t a3, size_t a4, size_t a5);
+int ef_debug_subsys_enabled(ef_debug_subsys_t subsys);
+void ef_debug_subsys_enable(ef_debug_subsys_t subsys);
+void ef_debug_subsys_disable(ef_debug_subsys_t subsys);
 
 char * getenv(const char *name);
 void * malloc(size_t size);

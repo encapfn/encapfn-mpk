@@ -10,8 +10,7 @@
 use std::borrow::Cow;
 use std::cell::{Cell, UnsafeCell};
 use std::collections::HashMap;
-use std::collections::LinkedList;
-use std::ffi::{CStr, CString};
+use std::ffi::{c_void, CStr, CString};
 use std::io::{Seek, SeekFrom, Write};
 use std::marker::PhantomData;
 use std::mem::MaybeUninit;
@@ -497,6 +496,10 @@ pub struct EncapfnMPKRtAsmState {
     // Log-prefix String. Contained in asm state, as it should be accessible to
     // callbacks running before the runtime struct is fully built:
     log_prefix: String,
+
+    // Allocation scope active across an invocation of generic_invoke, set in
+    // the `execute` hook:
+    active_alloc_scope: Cell<*mut ()>,
 }
 
 #[repr(C)]
@@ -552,7 +555,64 @@ pub struct EncapfnMPKRt<ID: EFID> {
 unsafe impl<ID: EFID> Send for EncapfnMPKRt<ID> {}
 unsafe impl<ID: EFID> Sync for EncapfnMPKRt<ID> {} // TODO: remove!
 
+// Use 6 arguments, as that's how many are passed in registers on x86.
+#[repr(C)]
+pub struct EncapfnMPKRtCallbackTrampolineFnReturn {
+    reg0: usize,
+    reg1: usize,
+}
+
+#[repr(usize)]
+enum EncapfnMPKRtCallbackIDs {
+    Debug = usize::MAX,
+}
+
+type EncapfnMPKRtCallbackTrampolineFn =
+    unsafe extern "C" fn(
+        usize,
+        usize,
+        usize,
+        usize,
+        usize,
+        usize,
+    ) -> EncapfnMPKRtCallbackTrampolineFnReturn;
+
 impl<ID: EFID> EncapfnMPKRt<ID> {
+    const CALLBACK_POOL: [EncapfnMPKRtCallbackTrampolineFn; 32] = [
+        Self::callback_trampoline::<0>,
+        Self::callback_trampoline::<1>,
+        Self::callback_trampoline::<2>,
+        Self::callback_trampoline::<3>,
+        Self::callback_trampoline::<4>,
+        Self::callback_trampoline::<5>,
+        Self::callback_trampoline::<6>,
+        Self::callback_trampoline::<7>,
+        Self::callback_trampoline::<8>,
+        Self::callback_trampoline::<9>,
+        Self::callback_trampoline::<10>,
+        Self::callback_trampoline::<11>,
+        Self::callback_trampoline::<12>,
+        Self::callback_trampoline::<13>,
+        Self::callback_trampoline::<14>,
+        Self::callback_trampoline::<15>,
+        Self::callback_trampoline::<16>,
+        Self::callback_trampoline::<17>,
+        Self::callback_trampoline::<18>,
+        Self::callback_trampoline::<19>,
+        Self::callback_trampoline::<20>,
+        Self::callback_trampoline::<21>,
+        Self::callback_trampoline::<22>,
+        Self::callback_trampoline::<23>,
+        Self::callback_trampoline::<24>,
+        Self::callback_trampoline::<25>,
+        Self::callback_trampoline::<26>,
+        Self::callback_trampoline::<27>,
+        Self::callback_trampoline::<28>,
+        Self::callback_trampoline::<29>,
+        Self::callback_trampoline::<30>,
+        Self::callback_trampoline::<31>,
+    ];
+
     // TODO: mark unsafe
     pub fn new<N: AsRef<CStr>>(
         libraries: impl Iterator<Item = N>,
@@ -561,7 +621,7 @@ impl<ID: EFID> EncapfnMPKRt<ID> {
         allow_global_read: bool,
     ) -> (
         Self,
-        AllocScope<'static, EncapfnMPKRtAllocTracker, ID>,
+        AllocScope<'static, EncapfnMPKRtAllocChain<'static>, ID>,
         AccessScope<ID>,
     ) {
         // Right now, we just acquire the DL_LOCK for the entire
@@ -900,6 +960,8 @@ impl<ID: EFID> EncapfnMPKRt<ID> {
             invoke_res_ptr: UnsafeCell::new(std::ptr::null_mut()),
 
             log_prefix,
+
+            active_alloc_scope: Cell::new(std::ptr::null_mut()),
         };
 
         let runtime_init_addr =
@@ -1301,12 +1363,99 @@ impl<ID: EFID> EncapfnMPKRt<ID> {
         (
             rt,
             unsafe {
-                AllocScope::new(EncapfnMPKRtAllocTracker {
-                    allocations: LinkedList::new(),
-                })
+                AllocScope::new(EncapfnMPKRtAllocChain::BaseAllocations(
+                    EncapfnMPKRtBaseAllocations {
+                        allocations: Vec::new(),
+                    },
+                ))
             },
             unsafe { AccessScope::new() },
         )
+    }
+
+    fn setup_callback_int<'a, C, F, R>(
+        &self,
+        callback: &'a mut C,
+        alloc_scope: &mut AllocScope<
+            '_,
+            <Self as EncapfnRt>::AllocTracker<'_>,
+            <Self as EncapfnRt>::ID,
+        >,
+        fun: F,
+    ) -> Result<R, EFError>
+    where
+        C: FnMut(
+            &<Self as EncapfnRt>::CallbackContext,
+            &mut <Self as EncapfnRt>::CallbackReturn,
+            *mut (),
+            *mut (),
+        ),
+        F: for<'b> FnOnce(
+            *const <Self as EncapfnRt>::CallbackTrampolineFn,
+            &'b mut AllocScope<'_, <Self as EncapfnRt>::AllocTracker<'_>, <Self as EncapfnRt>::ID>,
+        ) -> R,
+    {
+        struct Context<'a, ClosureTy> {
+            closure: &'a mut ClosureTy,
+        }
+
+        unsafe extern "C" fn callback_wrapper<
+            'a,
+            ClosureTy: FnMut(
+                    &EncapfnMPKRtCallbackContext,
+                    &mut EncapfnMPKRtCallbackReturn,
+                    *mut (),
+                    *mut (),
+                ) + 'a,
+        >(
+            ctx_ptr: *mut c_void,
+            callback_ctx: &EncapfnMPKRtCallbackContext,
+            callback_ret: &mut EncapfnMPKRtCallbackReturn,
+            alloc_scope: *mut (),
+            access_scope: *mut (),
+        ) {
+            let ctx: &mut Context<'a, ClosureTy> =
+                unsafe { &mut *(ctx_ptr as *mut Context<'a, ClosureTy>) };
+
+            // For now, we assume that the functoin doesn't unwind:
+            (ctx.closure)(callback_ctx, callback_ret, alloc_scope, access_scope)
+        }
+
+        // Ensure that the context pointer is compatible in size and
+        // layout to a c_void pointer:
+        assert_eq!(
+            core::mem::size_of::<*mut c_void>(),
+            core::mem::size_of::<*mut Context<'a, C>>()
+        );
+        assert_eq!(
+            core::mem::align_of::<*mut c_void>(),
+            core::mem::align_of::<*mut Context<'a, C>>()
+        );
+
+        let mut ctx: Context<'a, C> = Context { closure: callback };
+
+        let callback_id = alloc_scope.tracker().next_callback_id();
+
+        let mut inner_alloc_scope = unsafe {
+            AllocScope::new(EncapfnMPKRtAllocChain::Callback(
+                callback_id,
+                EncapfnMPKRtCallbackDescriptor {
+                    wrapper: callback_wrapper::<C>,
+                    context: &mut ctx as *mut _ as *mut c_void,
+                    _lt: PhantomData::<&'a mut c_void>,
+                },
+                alloc_scope.tracker(),
+            ))
+        };
+
+        let callback_trampoline = Self::CALLBACK_POOL[callback_id];
+
+        let res = fun(
+            callback_trampoline as *const EncapfnMPKRtCallbackTrampolineFn,
+            &mut inner_alloc_scope,
+        );
+
+        Ok(res)
     }
 
     #[naked]
@@ -1339,11 +1488,11 @@ impl<ID: EFID> EncapfnMPKRt<ID> {
             mov r13, 0                     // Copy the stack-spill immediate into r12
 
             // Load the function arguments:
-            // - rdi: callback_addr
+            // - rdi: debug_callback_addr
             // - rsi: heap_top
             // - rdx: heap_bottom
             // - rcx: environ
-            lea rdi, [rip - {raw_callback_handler_sym}]
+            lea rdi, [rip - {debug_cb}]
             mov rsi, rcx
             mov rdx, r8
             mov rcx, r9
@@ -1354,30 +1503,140 @@ impl<ID: EFID> EncapfnMPKRt<ID> {
             jmp r14
             ",
             generic_invoke_sym = sym Self::generic_invoke,
-            raw_callback_handler_sym = sym Self::raw_callback_handler,
+            debug_cb = sym Self::callback_trampoline::<{ EncapfnMPKRtCallbackIDs::Debug as usize }>,
         );
     }
 
     unsafe extern "C" fn callback_handler(
+        a0: usize,
+        a1: usize,
+        a2: usize,
+        a3: usize,
+        a4: usize,
+        a5: usize,
         asm_state: &EncapfnMPKRtAsmState,
-        id: usize,
-        arg0: usize,
-        arg1: usize,
-        arg2: usize,
-        arg3: usize,
-    ) {
-        // It is not always legal to upgrade our asm_state pointer to a runtime
-        // pointer. Some initial entries into the foreign library (and
-        // subsequent callbacks) are made without the fully constructed
-        // Runtime). Hence, check whether it's constructed before casting
-        // `asm_state` to an `rt: &Self`!
+        callback_id: usize,
+    ) -> EncapfnMPKRtCallbackTrampolineFnReturn {
+        // It is not always legal to upgrade our asm_state pointer to a full
+        // runtime (`EncapfnMPKRt`) pointer. Some initial entries into the
+        // foreign library (and subsequent callbacks) are made without the fully
+        // constructed Runtime). Hence, check whether it's constructed before
+        // casting `asm_state` to an `rt: &Self`!
 
-        // TODO: debug segfaults here, not good. Why?
-        eprintln!(
-            "{} Got callback with ID {}, args: {:016x}, {:016x}, {:016x}, {:016x}",
-            asm_state.log_prefix, id, arg0, arg1, arg2, arg3
+        if callback_id == EncapfnMPKRtCallbackIDs::Debug as usize {
+            // TODO: debug segfaults here, not good. Why?
+            eprintln!(
+		"Got callback with RT {:p}, callback ID {}, args: {:016x}, {:016x}, {:016x}, {:016x}, {:016x}, {:016x}",
+		asm_state as *const _, callback_id, a0, a1, a2, a3, a4, a5,
+            );
+
+            std::io::stdout().flush().unwrap();
+
+            return EncapfnMPKRtCallbackTrampolineFnReturn { reg0: 0, reg1: 0 };
+        }
+
+        // Recover the allocation scope for retrieving the target callback and
+        // passing it only callback code:
+        let alloc_scope_ptr = asm_state.active_alloc_scope.get();
+        if alloc_scope_ptr == std::ptr::null_mut() {
+            panic!("Callback invoked without active alloc scope!");
+        }
+
+        let alloc_scope: &AllocScope<
+            '_,
+            <Self as EncapfnRt>::AllocTracker<'_>,
+            <Self as EncapfnRt>::ID,
+        > = &*(alloc_scope_ptr as *mut _);
+
+        // Check if the callback ID matches the alloc_scope chain's
+        // callback descriptor:
+        let mut cur = alloc_scope.tracker();
+
+        let callback_desc = loop {
+            match cur {
+                EncapfnMPKRtAllocChain::BaseAllocations(_) => {
+                    // No callback found:
+                    break None;
+                }
+                EncapfnMPKRtAllocChain::Callback(desc_id, desc, pred) => {
+                    if callback_id == *desc_id {
+                        // Springboard matches this callback:
+                        break Some(desc);
+                    } else {
+                        // Check the predecessor:
+                        cur = pred;
+                    }
+                }
+                EncapfnMPKRtAllocChain::Cons(pred)
+                | EncapfnMPKRtAllocChain::Allocation(_, pred) => {
+                    cur = pred;
+                }
+            }
+        };
+
+        let callback_desc = if let Some(desc) = callback_desc {
+            desc
+        } else {
+            // This is not a callback invocation.
+            panic!(
+                "No valid callback registered for callback ID {}",
+                callback_id
+            );
+        };
+
+        // Construct a CallbackContext from the arguments to this function:
+        let callback_ctx = EncapfnMPKRtCallbackContext {
+            arg_regs: [a0, a1, a2, a3, a4, a5],
+        };
+
+        // Construct a default CallbackReturn:
+        let mut callback_ret = EncapfnMPKRtCallbackReturn {
+            return_regs: [0; 2],
+        };
+
+        // Execute the interrupt handler function.
+        //
+        // TODO: In the future, we should transition this out of the trap
+        // handler to allow for nested domain switches.
+        let mut inner_alloc_scope: AllocScope<'_, EncapfnMPKRtAllocChain<'_>, ID> =
+            AllocScope::new(EncapfnMPKRtAllocChain::Cons(alloc_scope.tracker()));
+
+        callback_desc.invoke(
+            &callback_ctx,
+            &mut callback_ret,
+            &mut inner_alloc_scope as *mut _ as *mut (),
+            // Safe, as this should only be triggered by foreign code, when the only
+            // existing AccessScope<ID> is already borrowed by the trampoline:
+            &mut AccessScope::<ID>::new() as *mut _ as *mut (),
         );
-        std::io::stdout().flush().unwrap();
+
+        EncapfnMPKRtCallbackTrampolineFnReturn {
+            reg0: callback_ret.return_regs[0],
+            reg1: callback_ret.return_regs[1],
+        }
+    }
+
+    #[naked]
+    unsafe extern "C" fn callback_trampoline<const CALLBACK_ID: usize>(
+        _a0: usize,
+        _a1: usize,
+        _a2: usize,
+        _a3: usize,
+        _a4: usize,
+        _a5: usize,
+    ) -> EncapfnMPKRtCallbackTrampolineFnReturn {
+        core::arch::naked_asm!(
+            "
+                // Load the ID of the callback into r10, which can be clobbered:
+                mov r10, ${callback_id}
+
+                // Execute the raw callback handler:
+                lea r11, [rip - {raw_callback_handler}]
+                jmp r11
+            ",
+            callback_id = const CALLBACK_ID,
+            raw_callback_handler = sym Self::raw_callback_handler,
+        );
     }
 
     #[naked]
@@ -1390,9 +1649,14 @@ impl<ID: EFID> EncapfnMPKRt<ID> {
 
                 // Foreign code may have passed arguments in rcx and rdx,
                 // however we do need to clobber them. Thus we temporarily
-                // move those registers into other callee-saved registers:
-                mov r10, rcx
-                mov r11, rdx
+                // save those registers.
+                //
+                // We must not overwrite r10, as that contains our CALLBACK_ID.
+                //
+                // x86 does not have enough scratch registers for both rcx
+                // rdx, so stack rdx instead.
+                mov r11, rcx
+                push rdx
 
                 // Restore access to all PKEYs. All of rax, rcx and rdx are
                 // caller-saved, so we can clobber them here:
@@ -1402,8 +1666,8 @@ impl<ID: EFID> EncapfnMPKRt<ID> {
                 wrpkru
 
                 // Restore the argument registers:
-                mov rdx, r11
-                mov rcx, r10
+                pop rdx
+                mov rcx, r11
 
                 // We're back in 'trusted code' here. To avoid any spurious SIGSEGV's
                 // later on, make sure that untrusted code has indeed cleared PKRU
@@ -1417,35 +1681,35 @@ impl<ID: EFID> EncapfnMPKRt<ID> {
                 // We load the runtime pointer into a callee-saved register that,
                 // by convention, is reserved by all callback invocations:
                 //
-                // Load the runtime pointer into r10:
-                mov  r10, qword ptr fs:[{rust_thread_state_static}@TPOFF + {rts_runtime_offset}]
+                // Load the runtime pointer into r11:
+                mov  r11, qword ptr fs:[{rust_thread_state_static}@TPOFF + {rts_runtime_offset}]
 
                 // Update the foreign stack pointer in our runtime struct, such
                 // that the callback handler can access it and we use it to
                 // restore the stack pointer after the callback has been run:
-                mov qword ptr [r10 + {rtas_foreign_stack_ptr_offset}], rsp
+                mov qword ptr [r11 + {rtas_foreign_stack_ptr_offset}], rsp
 
                 // Now, restore the Rust stack. We did not use the red-zone in
                 // the invoke functions, and hence can just align the stack
                 // down to 16 bytes to call the function:
-                mov rsp, qword ptr [r10 + {rtas_rust_stack_ptr_offset}]
+                mov rsp, qword ptr [r11 + {rtas_rust_stack_ptr_offset}]
                 and rsp, -16
 
-                // Push all values that we intend to retain on the Rust stack.
-                // The Rust function follows the C ABI, so we don't need to
-                // worry about this introducing any additional clobbers.
-                //
-                // For now, we only need to save the runtime pointer:
-                push r10               // Save rt pointer on Rust stack
+                // Push the stacked function arguments. We pass the CALLBACK_ID
+                // and runtime pointer. Passing two 8-byte arguments leaves the
+                // stack aligned to 16 bytes.
+                push r10               // 2nd stacked argument, CALLBACK_ID
+                push r11               // 1st stacked argument, &rt
 
                 // Finally, invoke the callback handler:
                 call {callback_handler_sym}
 
-                // Restore the runtime pointer from the Rust stack:
+                // Restore the stacked arguments:
+                pop r11
                 pop r10
 
                 // Restore the userspace stack pointer:
-                mov rsp, qword ptr [r10 + {rtas_foreign_stack_ptr_offset}]
+                mov rsp, qword ptr [r11 + {rtas_foreign_stack_ptr_offset}]
 
                 // Now, switch back the PKEYs. For this, we need to preserve
                 // the return value registers rax and rdx. This may overflow
@@ -1456,7 +1720,7 @@ impl<ID: EFID> EncapfnMPKRt<ID> {
                 // Move the intended PKRU value into the thread-local static, such
                 // that we can compare it after we run the WRPKRU instruction.
                 // This prevents it from being used as a gadget by untrusted code.
-                mov eax, dword ptr [r10 + {rtas_foreign_code_pkru_offset}]
+                mov eax, dword ptr [r11 + {rtas_foreign_code_pkru_offset}]
                 mov dword ptr fs:[{rust_thread_state_static}@TPOFF + {rts_pkru_shadow_offset}], eax
 
                 // eax loaded above!
@@ -1470,10 +1734,10 @@ impl<ID: EFID> EncapfnMPKRt<ID> {
                 // copy and make sure that its value matches rax.
                 //
                 // Load the PKRU shadow copy:
-                mov  r10d, dword ptr fs:[{rust_thread_state_static}@TPOFF + {rts_pkru_shadow_offset}]
+                mov  r11d, dword ptr fs:[{rust_thread_state_static}@TPOFF + {rts_pkru_shadow_offset}]
                 //
                 // Compare it against the restored value:
-                cmp eax, r10d
+                cmp eax, r11d
                 je 500f
                 ud2                    // Crash with an illegal instruction
 
@@ -1726,29 +1990,166 @@ impl<ID: EFID> EncapfnMPKRt<ID> {
 }
 
 #[derive(Clone, Debug)]
-pub struct EncapfnMPKRtAllocTracker {
-    allocations: LinkedList<(*mut (), usize)>,
+pub struct EncapfnMPKRtAllocation {
+    ptr: *mut (),
+    len: usize,
+    mutable: bool,
 }
 
-unsafe impl Send for EncapfnMPKRtAllocTracker {}
+impl EncapfnMPKRtAllocation {
+    fn is_valid_int(&self, ptr: *mut (), len: usize, mutable: bool) -> bool {
+        (!mutable || self.mutable)
+            && (ptr as usize) >= (self.ptr as usize)
+            && ((ptr as usize)
+                .checked_add(len)
+                .map(|end| end <= (self.ptr as usize) + self.len)
+                .unwrap_or(false))
+    }
+}
 
-unsafe impl AllocTracker for EncapfnMPKRtAllocTracker {
+#[derive(Clone, Debug)]
+pub struct EncapfnMPKRtBaseAllocations {
+    allocations: Vec<EncapfnMPKRtAllocation>,
+}
+
+// unsafe impl Send for EncapfnMPKRtBaseAllocations {}
+
+impl EncapfnMPKRtBaseAllocations {
+    fn is_valid_int(&self, ptr: *mut (), len: usize, mutable: bool) -> bool {
+        // TODO: switch to binary search
+        self.allocations
+            .iter()
+            .find(|alloc| alloc.is_valid_int(ptr, len, mutable))
+            .is_some()
+    }
+}
+
+#[derive(Debug)]
+pub struct EncapfnMPKRtCallbackDescriptor<'a> {
+    wrapper: unsafe extern "C" fn(
+        *mut c_void,
+        &EncapfnMPKRtCallbackContext,
+        &mut EncapfnMPKRtCallbackReturn,
+        *mut (),
+        *mut (),
+    ),
+    context: *mut c_void,
+    _lt: PhantomData<&'a mut c_void>,
+}
+
+impl EncapfnMPKRtCallbackDescriptor<'_> {
+    unsafe fn invoke(
+        &self,
+        callback_ctx: &EncapfnMPKRtCallbackContext,
+        callback_ret: &mut EncapfnMPKRtCallbackReturn,
+        alloc_scope: *mut (),
+        access_scope: *mut (),
+    ) {
+        (self.wrapper)(
+            self.context,
+            callback_ctx,
+            callback_ret,
+            alloc_scope,
+            access_scope,
+        )
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct EncapfnMPKRtCallbackContext {
+    pub arg_regs: [usize; 6],
+}
+
+impl CallbackContext for EncapfnMPKRtCallbackContext {
+    fn get_argument_register(&self, reg: usize) -> Option<usize> {
+        self.arg_regs.get(reg).copied()
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct EncapfnMPKRtCallbackReturn {
+    pub return_regs: [usize; 2],
+}
+
+impl CallbackReturn for EncapfnMPKRtCallbackReturn {
+    fn set_return_register(&mut self, reg: usize, value: usize) -> bool {
+        if let Some(r) = self.return_regs.get_mut(reg) {
+            *r = value;
+            true
+        } else {
+            false
+        }
+    }
+}
+
+#[derive(Debug)]
+pub enum EncapfnMPKRtAllocChain<'a> {
+    BaseAllocations(EncapfnMPKRtBaseAllocations),
+    Allocation(EncapfnMPKRtAllocation, &'a EncapfnMPKRtAllocChain<'a>),
+    Callback(
+        usize,
+        EncapfnMPKRtCallbackDescriptor<'a>,
+        &'a EncapfnMPKRtAllocChain<'a>,
+    ),
+    Cons(&'a EncapfnMPKRtAllocChain<'a>),
+}
+
+struct EncapfnMPKRtAllocChainIter<'a>(Option<&'a EncapfnMPKRtAllocChain<'a>>);
+
+impl<'a> Iterator for EncapfnMPKRtAllocChainIter<'a> {
+    type Item = &'a EncapfnMPKRtAllocChain<'a>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if let Some(cur) = self.0 {
+            self.0 = match cur {
+                EncapfnMPKRtAllocChain::BaseAllocations(_) => None,
+                EncapfnMPKRtAllocChain::Allocation(_, pred) => Some(pred),
+                EncapfnMPKRtAllocChain::Callback(_, _, pred) => Some(pred),
+                EncapfnMPKRtAllocChain::Cons(pred) => Some(pred),
+            };
+
+            Some(cur)
+        } else {
+            None
+        }
+    }
+}
+
+impl<'a> EncapfnMPKRtAllocChain<'a> {
+    fn iter(&'a self) -> EncapfnMPKRtAllocChainIter<'a> {
+        EncapfnMPKRtAllocChainIter(Some(self))
+    }
+
+    fn is_valid_int(&self, ptr: *mut (), len: usize, mutable: bool) -> bool {
+        self.iter().any(|elem| match elem {
+            EncapfnMPKRtAllocChain::BaseAllocations(base_allocs) => {
+                base_allocs.is_valid_int(ptr, len, mutable)
+            }
+            EncapfnMPKRtAllocChain::Allocation(alloc, _) => alloc.is_valid_int(ptr, len, mutable),
+            EncapfnMPKRtAllocChain::Callback(_, _, _) => false,
+            EncapfnMPKRtAllocChain::Cons(_) => false,
+        })
+    }
+
+    fn next_callback_id(&self) -> usize {
+        self.iter()
+            .find_map(|elem| match elem {
+                EncapfnMPKRtAllocChain::BaseAllocations(_) => None,
+                EncapfnMPKRtAllocChain::Allocation(_, _) => None,
+                EncapfnMPKRtAllocChain::Callback(id, _, _) => Some(id + 1),
+                EncapfnMPKRtAllocChain::Cons(_) => None,
+            })
+            .unwrap_or(0)
+    }
+}
+
+unsafe impl AllocTracker for EncapfnMPKRtAllocChain<'_> {
     fn is_valid(&self, ptr: *const (), len: usize) -> bool {
-        // TODO: check all other mutable/immutable pages as well!
-        self.is_valid_mut(ptr as *mut (), len)
+        self.is_valid_int(ptr as *mut (), len, false)
     }
 
     fn is_valid_mut(&self, ptr: *mut (), len: usize) -> bool {
-        self.allocations
-            .iter()
-            .find(|(aptr, alen)| {
-                (ptr as usize) >= (*aptr as usize)
-                    && ((ptr as usize)
-                        .checked_add(len)
-                        .map(|end| end <= (*aptr as usize) + alen)
-                        .unwrap_or(false))
-            })
-            .is_some()
+        self.is_valid_int(ptr, len, true)
     }
 }
 
@@ -1758,27 +2159,11 @@ pub struct EncapfnMPKSymbolTable<const SYMTAB_SIZE: usize> {
 
 unsafe impl<const SYMTAB_SIZE: usize> Send for EncapfnMPKSymbolTable<SYMTAB_SIZE> {}
 
-#[derive(Debug, Clone)]
-pub struct EncapfnMPKRtCallbackContext;
-impl CallbackContext for EncapfnMPKRtCallbackContext {
-    fn get_argument_register(&self, _reg: usize) -> Option<usize> {
-        None
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct EncapfnMPKRtCallbackReturn;
-impl CallbackReturn for EncapfnMPKRtCallbackReturn {
-    fn set_return_register(&mut self, _reg: usize, _value: usize) -> bool {
-        false
-    }
-}
-
 unsafe impl<ID: EFID> EncapfnRt for EncapfnMPKRt<ID> {
     type ID = ID;
-    type AllocTracker<'a> = EncapfnMPKRtAllocTracker;
+    type AllocTracker<'a> = EncapfnMPKRtAllocChain<'a>;
     type ABI = SysVAMD64ABI;
-    type CallbackTrampolineFn = unsafe extern "C" fn();
+    type CallbackTrampolineFn = EncapfnMPKRtCallbackTrampolineFn;
     type CallbackContext = EncapfnMPKRtCallbackContext;
     type CallbackReturn = EncapfnMPKRtCallbackReturn;
     type SymbolTableState<const SYMTAB_SIZE: usize, const FIXED_OFFSET_SYMTAB_SIZE: usize> =
@@ -1786,7 +2171,7 @@ unsafe impl<ID: EFID> EncapfnRt for EncapfnMPKRt<ID> {
 
     fn execute<R, F: FnOnce() -> R>(
         &self,
-        _alloc_scope: &mut AllocScope<'_, Self::AllocTracker<'_>, Self::ID>,
+        alloc_scope: &mut AllocScope<'_, Self::AllocTracker<'_>, Self::ID>,
         _access_scope: &mut AccessScope<Self::ID>,
         f: F,
     ) -> R {
@@ -1796,7 +2181,21 @@ unsafe impl<ID: EFID> EncapfnRt for EncapfnMPKRt<ID> {
         unsafe {
             initialize_rust_thread_state();
         }
-        f()
+
+        // Store the allocation scope in the runtime, for later recovery within a callback:
+        let prev_active_alloc_scope = self.asm_state.active_alloc_scope.get();
+        self.asm_state
+            .active_alloc_scope
+            .set(alloc_scope as *mut _ as *mut ());
+
+        let res = f();
+
+        // Restore the previous alloc scope:
+        self.asm_state
+            .active_alloc_scope
+            .set(prev_active_alloc_scope);
+
+        res
     }
 
     fn resolve_symbols<const SYMTAB_SIZE: usize, const FIXED_OFFSET_SYMTAB_SIZE: usize>(
@@ -1853,9 +2252,9 @@ unsafe impl<ID: EFID> EncapfnRt for EncapfnMPKRt<ID> {
 
     fn setup_callback<'a, C, F, R>(
         &self,
-        _callback: &'a mut C,
-        _alloc_scope: &mut AllocScope<'_, Self::AllocTracker<'_>, Self::ID>,
-        _fun: F,
+        callback: &'a mut C,
+        alloc_scope: &mut AllocScope<'_, Self::AllocTracker<'_>, Self::ID>,
+        fun: F,
     ) -> Result<R, EFError>
     where
         C: FnMut(
@@ -1869,7 +2268,25 @@ unsafe impl<ID: EFID> EncapfnRt for EncapfnMPKRt<ID> {
             &'b mut AllocScope<'_, Self::AllocTracker<'_>, Self::ID>,
         ) -> R,
     {
-        unimplemented!();
+        let typecast_callback =
+            &mut |callback_ctx: &EncapfnMPKRtCallbackContext,
+                  callback_ret: &mut EncapfnMPKRtCallbackReturn,
+                  alloc_scope_ptr: *mut (),
+                  access_scope_ptr: *mut ()| {
+                let alloc_scope = unsafe {
+                    &mut *(alloc_scope_ptr as *mut AllocScope<'_, Self::AllocTracker<'_>, Self::ID>)
+                };
+
+                let access_scope =
+                    unsafe { &mut *(access_scope_ptr as *mut AccessScope<Self::ID>) };
+
+                callback(callback_ctx, callback_ret, alloc_scope, access_scope);
+            };
+
+        // We need to erase the type-dependence of the closure argument on `ID`,
+        // as that creates life-time issues when the `EncapfnMPKRtAllocChain` is
+        // parameterized over it:
+        self.setup_callback_int(typecast_callback, alloc_scope, fun)
     }
 
     // We provide only the required implementations and rely on default
@@ -1995,26 +2412,19 @@ unsafe impl<ID: EFID> EncapfnRt for EncapfnMPKRt<ID> {
         F: for<'b> FnOnce(*mut (), &'b mut AllocScope<'_, Self::AllocTracker<'_>, Self::ID>) -> R,
     {
         self.allocate_stacked_untracked_mut(layout, move |ptr| {
-            // Add allocation to the tracker, to allow creation of references
-            // pointing into this memory:
-            alloc_scope
-                .tracker_mut()
-                .allocations
-                // Use the requested layout here, we don't give access to padding
-                // that may be added by `alloc_stacked_untracked`.
-                .push_back((ptr, layout.size()));
+            // Create a new allocation frame:
+            let mut inner_alloc_scope: AllocScope<'_, EncapfnMPKRtAllocChain<'_>, ID> = unsafe {
+                AllocScope::new(EncapfnMPKRtAllocChain::Allocation(
+                    EncapfnMPKRtAllocation {
+                        ptr,
+                        len: layout.size(),
+                        mutable: true,
+                    },
+                    alloc_scope.tracker(),
+                ))
+            };
 
-            let ret = fun(ptr, alloc_scope);
-
-            // Remove this allocation from the tracker. Allocations are made by the
-            // global heap allocator, which will never alias allocations, so we can
-            // uniquely identify ours by its pointer:
-            alloc_scope
-                .tracker_mut()
-                .allocations
-                .retain(|(alloc_ptr, _)| *alloc_ptr != ptr);
-
-            ret
+            fun(ptr, &mut inner_alloc_scope)
         })
     }
 }

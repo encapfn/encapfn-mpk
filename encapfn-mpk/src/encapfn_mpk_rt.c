@@ -67,21 +67,34 @@ size_t strlen(const char* str) {
 
 // ---------- EF Callback Infrastructure, to be initialized first -------------
 
-static void *EF_CALLBACK_ADDR = 0;
+typedef size_t (*ef_callback_t)(size_t a0, size_t a1, size_t a2, size_t a3, size_t a4, size_t a5);
 
-typedef size_t (*ef_callback_t)(void *_rt, size_t id, size_t arg0, size_t arg1, size_t arg2, size_t arg3);
+static ef_callback_t EF_DEBUG_CALLBACK = 0;
+static size_t EF_DEBUG_SUBSYS_ENABLE_MAP = 0;
 
-size_t ef_callback(size_t id, size_t arg0, size_t arg1, size_t arg2, size_t arg3) {
-	//return ((ef_callback_t) EF_CALLBACK_ADDR)(0, id, arg0, arg1, arg2, arg3);
+size_t ef_debug_callback(ef_debug_subsys_t subsys, size_t a1, size_t a2, size_t a3, size_t a4, size_t a5) {
+    if (EF_DEBUG_CALLBACK && ef_debug_subsys_enabled(subsys)) {
+	return EF_DEBUG_CALLBACK(subsys, a1, a2, a3, a4, a5);
+    } else {
+	return 0;
+    }
 }
 
-void ef_callback_init(void *callback_addr) {
-        // Initialize callbacks:
-	EF_CALLBACK_ADDR = callback_addr;
+int ef_debug_subsys_enabled(ef_debug_subsys_t subsys) {
+    return (EF_DEBUG_SUBSYS_ENABLE_MAP & (1 << subsys)) != 0;
+}
 
-	// Immediately report back that the callback was "accepted" / set correctly:
-	char *msg = "Callback registered successfully";
-	ef_callback(1, (size_t) msg, 0, 0, 0);
+void ef_debug_subsys_enable(ef_debug_subsys_t subsys) {
+    EF_DEBUG_SUBSYS_ENABLE_MAP |= (1 << subsys);
+}
+
+void ef_debug_subsys_disable(ef_debug_subsys_t subsys) {
+    EF_DEBUG_SUBSYS_ENABLE_MAP &= ~(1 << subsys);
+}
+
+void ef_debug_callback_init(void *debug_callback_addr) {
+    // Initialize callbacks:
+    EF_DEBUG_CALLBACK = debug_callback_addr;
 }
 
 // ---------- POSIX function overrides ----------------------------------------
@@ -154,7 +167,7 @@ static void * alloc_bottom;
 static void * alloc_break;
 
 // Get a large block of memory to use for allocating
-void ef_alloc_init(void *top, void *bottom) 
+void ef_alloc_init(void *top, void *bottom)
 {
         alloc_top = top;
         alloc_bottom = bottom;
@@ -177,7 +190,7 @@ void *ef_malloc(size_t size) {
     if (newBreak < alloc_bottom)
     {
         // We ran out of room
-        ef_callback(0, 0xAAAAAAAAAAAAAAAA, size, 0, 0);
+        ef_debug_callback(EF_DEBUG_SUBSYS_ALLOC, 1, size, 0, 0, 0);
         return NULL;
     }
 
@@ -186,7 +199,7 @@ void *ef_malloc(size_t size) {
     alloc_break = newBreak;
     void *allocated = newBreak + sizeof(size_t);
 
-    ef_callback(0, 0xAAAAAAAAAAAAAAAA, size, 0, (size_t) allocated);
+    ef_debug_callback(EF_DEBUG_SUBSYS_ALLOC, 2, size, 0, (size_t) allocated, 0);
 	num_allocs++;
     return allocated;
 }
@@ -206,7 +219,6 @@ void * calloc(size_t nitems, size_t size)
     {
         return NULL;
     }
-    
 
     uint8_t * endPtr = ((uint8_t * )retVal) + size;
     for (uint8_t * ptr = retVal; ptr < endPtr; ptr++)
@@ -214,13 +226,13 @@ void * calloc(size_t nitems, size_t size)
         *ptr = 0;
     }
 
-    ef_callback(0, 0xBBBBBBBBBBBBBBBB, nitems, size, (size_t) retVal);
+    ef_debug_callback(EF_DEBUG_SUBSYS_ALLOC, 3, nitems, size, (size_t) retVal, 0);
     return retVal;
 }
 
 void * realloc(void * ptr, size_t newSize)
 {
-    ef_callback(0, 0xCCCCCCCCCCCCCCCC, (size_t) ptr, newSize, 0);
+    ef_debug_callback(EF_DEBUG_SUBSYS_ALLOC, 4, (size_t) ptr, newSize, 0, 0);
 
     // If called with a null-pointer, same as if calling malloc(newSize):
     if (ptr == NULL) {
@@ -260,7 +272,7 @@ void * realloc(void * ptr, size_t newSize)
 void free(void * ptr)
 {
     // Doesn't need to do anything, but could set size to 0?
-    ef_callback(0, 0xDDDDDDDDDDDDDDDD, (size_t) ptr, 0, 0);
+    ef_debug_callback(EF_DEBUG_SUBSYS_ALLOC, 5, (size_t) ptr, 0, 0, 0);
 
 	num_allocs--;
 	if (num_allocs <= 0)
@@ -273,9 +285,9 @@ void free(void * ptr)
 
 // ---------- Generic initialization routine ----------------------------------
 
-void ef_runtime_init(void *callback_addr, void *heap_top, void *heap_bottom, const char **environ) {
+void ef_runtime_init(void *debug_callback_addr, void *heap_top, void *heap_bottom, const char **environ) {
 	// Initialize the callback infrastructure:
-	ef_callback_init(callback_addr);
+	ef_debug_callback_init(debug_callback_addr);
 
 	// Initialize the allocator:
 	ef_alloc_init(heap_top, heap_bottom);
@@ -283,5 +295,7 @@ void ef_runtime_init(void *callback_addr, void *heap_top, void *heap_bottom, con
 	// Initialize the ef_environ variable from the still accessible
 	// environ. This uses malloc, so it needs to be done after the
 	// allocator has been initialized.
-	ef_environ_init(environ);
+	/* ef_environ_init(environ); */
+
+	ef_debug_callback(EF_DEBUG_SUBSYS_INIT, 0, 0, 0, 0, 0);
 }

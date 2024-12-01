@@ -6,6 +6,7 @@ use crate::libpng_bindings::{
     jmp_buf, longjmp, png_create_info_struct, png_create_read_struct, png_destroy_read_struct,
     png_get_image_height, png_get_io_ptr, png_get_rowbytes, png_info, png_read_image,
     png_read_info, png_set_longjmp_fn, png_set_read_fn, png_sig_cmp, png_size_t, png_struct,
+    png_get_image_width, png_read_end,
     setjmp,
 };
 
@@ -107,7 +108,7 @@ fn decode_png_c_wrapped(png_image: &[u8]) -> Result<Vec<Vec<u8>>, String> {
     Ok(result_vec)
 }
 
-fn png_init() -> Result<(), String> {
+pub fn png_init() -> Result<(), String> {
     unsafe {
         // for now, duplication is necessary
         // https://stackoverflow.com/questions/21485655/how-do-i-use-c-preprocessor-macros-with-rusts-ffi
@@ -152,5 +153,41 @@ pub fn unsafe_main() {
         println!("vec len: {}, first row: {:x?}", vec.len(), &vec[..1]);
     } else {
         println!("usage: png <png file>");
+    }
+}
+
+pub fn get_decompressed_image_buffer_size(png_image: &[u8]) -> (usize, usize, usize) {
+    if !is_png(&png_image[0..8]) {
+        panic!("Supplied image is not a valid PNG file!");
+    }
+
+
+    unsafe {
+        // this call mimics the define in png.h:
+        // # define png_jmpbuf(png_ptr) \
+        // (*png_set_longjmp_fn((png_ptr), longjmp, (sizeof (jmp_buf))))
+        if 0 != setjmp(png_set_longjmp_fn(
+            PNG_PTR,
+            Some(std::mem::transmute::<
+                unsafe extern "C" fn(_, _) -> !,
+                unsafe extern "C" fn(_, _) -> (),
+		>(longjmp)),
+            std::mem::size_of::<jmp_buf>(),
+        ) as *mut _)
+        {
+            panic!("read failed in libpng");
+        }
+
+        let image_ptr: *mut c_void = &png_image as *const &[u8] as *const _ as *mut _;
+        png_set_read_fn(PNG_PTR, image_ptr, Some(callback));
+
+        png_read_info(PNG_PTR, INFO_PTR);
+        let row_count = png_get_image_height(PNG_PTR, INFO_PTR) as usize;
+	let col_count = png_get_image_width(PNG_PTR, INFO_PTR) as usize;
+        let col_bytes = png_get_rowbytes(PNG_PTR, INFO_PTR) as usize;
+
+	png_read_end(PNG_PTR, std::ptr::null_mut());
+
+	(row_count, col_count, row_count * col_bytes + row_count * std::mem::size_of::<*mut *mut u8>())
     }
 }

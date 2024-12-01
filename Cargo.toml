@@ -3,6 +3,7 @@ resolver = "2"
 members = [
     "encapfn-mpk",
     "examples/brotli",
+    "examples/libpng",
     "examples/libsodium",
     "examples/ubench",
 ]

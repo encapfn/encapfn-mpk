@@ -75,12 +75,12 @@ checksum = "ace50bade8e6234aa140d9a2f552bbee1db4d353f69b8217bc503490fc1a9f26"
 [[package]]
 name = "bindgen"
 version = "0.69.4"
-source = "git+https://github.com/encapfn/rust-bindgen?rev=303b1f41e7ea715df515cd43ba7909bf61cf97cf#303b1f41e7ea715df515cd43ba7909bf61cf97cf"
+source = "git+https://github.com/encapfn/rust-bindgen?rev=3b0958d2dda39f9a899f011fb468772cfef1eaac#3b0958d2dda39f9a899f011fb468772cfef1eaac"
 dependencies = [
  "bitflags",
  "cexpr",
  "clang-sys",
- "itertools 0.12.1",
+ "itertools",
  "lazy_static",
  "lazycell",
  "log",
@@ -234,7 +234,7 @@ dependencies = [
  "clap",
  "criterion-plot",
  "is-terminal",
- "itertools 0.10.5",
+ "itertools",
  "num-traits",
  "once_cell",
  "oorandom",
@@ -255,7 +255,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6b50826342786a51a89e2da3a28f1c32b06e387201bc2d19791f622c673706b1"
 dependencies = [
  "cast",
- "itertools 0.10.5",
+ "itertools",
 ]
 
 [[package]]
@@ -310,7 +310,7 @@ checksum = "60b1af1c220855b6ceac025d3f6ecdd2b7c4894bfe9cd9bda4fbb4bc7c0d4cf0"
 [[package]]
 name = "encapfn"
 version = "0.1.0"
-source = "git+https://github.com/encapfn/encapfn?rev=a4d89b63c55256485ce459d92015fa218476ade0#a4d89b63c55256485ce459d92015fa218476ade0"
+source = "git+https://github.com/encapfn/encapfn?rev=7ec1e19bfa22cb98e45a1d132934d3630e48856a#7ec1e19bfa22cb98e45a1d132934d3630e48856a"
 
 [[package]]
 name = "encapfn-mpk"
@@ -451,15 +451,6 @@ name = "itertools"
 version = "0.10.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b0fd2260e829bddf4cb6ea802289de2f86d6a7a690192fbe91b3f46e0f2c8473"
-dependencies = [
- "either",
-]
-
-[[package]]
-name = "itertools"
-version = "0.12.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ba291022dbbd398a455acf126c1e341954079855bc60dfdda641363bd6922569"
 dependencies = [
  "either",
 ]

@@ -11,11 +11,11 @@ edition = "2021"
 
 [workspace.dependencies.encapfn]
 git = "https://github.com/encapfn/encapfn"
-rev = "a4d89b63c55256485ce459d92015fa218476ade0"
+rev = "7ec1e19bfa22cb98e45a1d132934d3630e48856a"
 # path = "../encapfn"
 features = [ "std" ]
 
 [workspace.dependencies.bindgen]
 git = "https://github.com/encapfn/rust-bindgen"
-rev = "303b1f41e7ea715df515cd43ba7909bf61cf97cf"
+rev = "3b0958d2dda39f9a899f011fb468772cfef1eaac"
 # path = "../rust-bindgen/bindgen"

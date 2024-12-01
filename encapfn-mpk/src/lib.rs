@@ -27,7 +27,7 @@ use encapfn::abi::calling_convention::{Stacked, AREG0, AREG1, AREG2, AREG3, AREG
 use encapfn::abi::sysv_amd64::SysVAMD64ABI;
 use encapfn::branding::EFID;
 use encapfn::rt::sysv_amd64::{SysVAMD64BaseRt, SysVAMD64InvokeRes, SysVAMD64Rt};
-use encapfn::rt::EncapfnRt;
+use encapfn::rt::{CallbackContext, CallbackReturn, EncapfnRt};
 use encapfn::types::{AccessScope, AllocScope, AllocTracker};
 use encapfn::{EFError, EFResult};
 
@@ -1758,12 +1758,29 @@ pub struct EncapfnMPKSymbolTable<const SYMTAB_SIZE: usize> {
 
 unsafe impl<const SYMTAB_SIZE: usize> Send for EncapfnMPKSymbolTable<SYMTAB_SIZE> {}
 
+#[derive(Debug, Clone)]
+pub struct EncapfnMPKRtCallbackContext;
+impl CallbackContext for EncapfnMPKRtCallbackContext {
+    fn get_argument_register(&self, _reg: usize) -> Option<usize> {
+        None
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct EncapfnMPKRtCallbackReturn;
+impl CallbackReturn for EncapfnMPKRtCallbackReturn {
+    fn set_return_register(&mut self, _reg: usize, _value: usize) -> bool {
+        false
+    }
+}
+
 unsafe impl<ID: EFID> EncapfnRt for EncapfnMPKRt<ID> {
     type ID = ID;
     type AllocTracker<'a> = EncapfnMPKRtAllocTracker;
     type ABI = SysVAMD64ABI;
     type CallbackTrampolineFn = unsafe extern "C" fn();
-    type CallbackCtx = ();
+    type CallbackContext = EncapfnMPKRtCallbackContext;
+    type CallbackReturn = EncapfnMPKRtCallbackReturn;
     type SymbolTableState<const SYMTAB_SIZE: usize, const FIXED_OFFSET_SYMTAB_SIZE: usize> =
         EncapfnMPKSymbolTable<SYMTAB_SIZE>;
 
@@ -1842,7 +1859,8 @@ unsafe impl<ID: EFID> EncapfnRt for EncapfnMPKRt<ID> {
     ) -> Result<R, EFError>
     where
         C: FnMut(
-            &Self::CallbackCtx,
+            &Self::CallbackContext,
+            &mut Self::CallbackReturn,
             &mut AllocScope<'_, Self::AllocTracker<'_>, Self::ID>,
             &mut AccessScope<Self::ID>,
         ),

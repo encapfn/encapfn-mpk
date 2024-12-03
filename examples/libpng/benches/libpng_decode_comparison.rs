@@ -97,6 +97,8 @@ pub fn criterion_benchmark(c: &mut Criterion) {
         unsafe { unsafe_ffi::png_destroy() };
     });
 
+    test_images.sort_by_key(|(_, _, (_, _, buffer_size))| *buffer_size);
+
     println!("Loaded test image dataset:");
     for (label, bytes, (rows, cols, buffer_size)) in &test_images {
         println!(
@@ -154,7 +156,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
                 //     assert!(&res_unsafe == res_ef);
                 //     assert!(res_unsafe == res_sandcrust);
                 // });
-                
+
                 // let tput_bytes: u64 = png_image.len() as u64;
                 let tput_bytes: u64 = *buffer_size as u64;
 

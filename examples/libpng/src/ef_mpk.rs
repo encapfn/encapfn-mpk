@@ -5,7 +5,7 @@ use encapfn::branding::EFID;
 use encapfn::rt::{CallbackContext, EncapfnRt};
 use encapfn::types::{AccessScope, AllocScope, EFMutSlice, EFPtr};
 
-use crate::unsafe_ffi::read_file;
+use crate::unsafe_ffi::{align_ptr, read_file};
 
 use crate::libpng_bindings::{png_info, png_struct, LibPng, LibPngRt};
 
@@ -231,12 +231,17 @@ pub fn decode_png<ID: EFID, RT: EncapfnRt<ID = ID>, L: LibPng<ID, RT, RT = RT>, 
 
                 // At a pointer offset of `row_count * col_bytes`, prepare an array of
                 // pointers pointing to `base_ptr + i * col_bytes`:
-                let row_pointers_arr =
-                    unsafe { dst_buffer.byte_offset((row_count * col_bytes).try_into().unwrap()) }
-                        as *mut *mut u8;
+                let row_pointers_arr: *mut *mut u8 = align_ptr(unsafe {
+                    dst_buffer.byte_offset((row_count * col_bytes).try_into().unwrap())
+                } as *mut *mut u8);
                 let row_pointers_slice = EFPtr::<*mut u8>::from(row_pointers_arr)
                     .upgrade_slice_mut(row_count, alloc)
-                    .unwrap();
+                    .unwrap_or_else(|| {
+                        panic!(
+                            "Failed to upgrade row_pointers_slice: {:p}, {}",
+                            row_pointers_arr, row_count
+                        )
+                    });
                 row_pointers_slice.write_from_iter(
                     (0..row_count).map(|row_idx| unsafe {
                         dst_buffer.byte_offset((row_idx * col_bytes).try_into().unwrap())

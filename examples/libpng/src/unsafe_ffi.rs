@@ -113,8 +113,9 @@ pub unsafe fn decode_png_preallocated<'a>(
     // Use pointer arithmetic, for a fair comparison with the EF MPK benchmark:
     let dst_buffer: *mut u8 = preallocated.as_mut_ptr() as *mut u8;
 
-    let row_pointers_arr =
-        dst_buffer.byte_offset((row_count * col_bytes).try_into().unwrap()) as *mut *mut u8;
+    let row_pointers_arr: *mut *mut u8 = align_ptr(
+        dst_buffer.byte_offset((row_count * col_bytes).try_into().unwrap()) as *mut *mut u8,
+    );
     let row_pointers_slice: &mut [*mut u8] =
         std::slice::from_raw_parts_mut(row_pointers_arr, row_count);
     row_pointers_slice
@@ -246,7 +247,17 @@ pub unsafe fn get_decompressed_image_buffer_size(png_image: &[u8]) -> (usize, us
         (
             row_count,
             col_count,
-            row_count * col_bytes + row_count * std::mem::size_of::<*mut *mut u8>(),
+            // Base array:
+            row_count * col_bytes
+            // Row pointers:
+            + row_count * std::mem::size_of::<*mut *mut u8>()
+            // Potential alignment bytes:
+            + std::mem::align_of::<*mut u8>(),
         )
     }
+}
+
+pub fn align_ptr<T>(ptr: *mut T) -> *mut T {
+    let a: usize = std::mem::align_of::<T>();
+    unsafe { ptr.byte_offset((a - (ptr as usize % a)).try_into().unwrap()) }
 }

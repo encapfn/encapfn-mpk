@@ -1946,7 +1946,8 @@ impl<ID: EFID> EncapfnMPKRt<ID> {
                 pop rdx
                 pop rax
 
-                // Restore the Rust stack pointer:
+                // Save back the foreign stack pointer, and restore the Rust stack pointer:
+                mov qword ptr [r10 + {rtas_foreign_stack_ptr_offset}], rsp
                 mov rsp, qword ptr [r10 + {rtas_rust_stack_ptr_offset}]
 
                 // Encode the return value. We recover the InvokeRes pointer

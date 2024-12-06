@@ -342,6 +342,7 @@ dependencies = [
  "env_logger",
  "rand",
  "sandcrust",
+ "serde_json",
 ]
 
 [[package]]

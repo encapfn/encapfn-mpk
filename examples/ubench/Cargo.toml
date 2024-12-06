@@ -16,6 +16,7 @@ bindgen.workspace = true
 [dev-dependencies]
 criterion = "0.5.1"
 sandcrust = { git = "https://github.com/atopia/sandcrust", rev = "0de40c50ebf8b6253dbf953c6e9e4498b1670c90" }
+serde_json = "1.0.133"
 
 [dependencies]
 encapfn.workspace = true
@@ -31,3 +32,18 @@ harness = false
 name = "validation_ubench"
 harness = false
 
+[[bench]]
+name = "process_startup_demo_nop_unsafe"
+harness = false
+
+[[bench]]
+name = "process_startup_demo_nop_ef_mpk"
+harness = false
+
+[[bench]]
+name = "process_startup_demo_nop_sandcrust"
+harness = false
+
+[[bench]]
+name = "process_startup_demo_nop"
+harness = false

@@ -1,0 +1,65 @@
+wrapper_name = "LibEFDemo"
+
+[functions.demo_nop]
+fntab_id = 0
+
+[functions.demo_return_size_t]
+fntab_id = 1
+
+[functions.demo_return_two_size_t_struct]
+fntab_id = 2
+
+[functions.demo_return_large_struct]
+fntab_id = 3
+
+[functions.demo_5args]
+fntab_id = 4
+
+[functions.demo_10args]
+fntab_id = 5
+
+[functions.demo_25args]
+fntab_id = 6
+
+[functions.demo_50args]
+fntab_id = 7
+
+[functions.demo_100args]
+fntab_id = 8
+
+[functions.demo_3args]
+fntab_id = 9
+
+[functions.demo_7args]
+fntab_id = 10
+
+[functions.demo_4args]
+fntab_id = 11
+
+# [functions.malloc]
+# fntab_id = 4
+#
+# [functions.calloc]
+# fntab_id = 5
+#
+# [functions.realloc]
+# fntab_id = 6
+#
+# [functions.free]
+# fntab_id = 7
+#
+# [functions.test_malloc]
+# fntab_id = 8
+#
+# [functions.test_calloc]
+# fntab_id = 9
+#
+# [functions.test_realloc]
+# fntab_id = 10
+#
+# [functions.sfWindow_create]
+# fntab_id = 11
+
+[types.demo_large_struct]
+
+[types.demo_two_size_t_struct]

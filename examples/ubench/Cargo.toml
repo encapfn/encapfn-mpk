@@ -1,0 +1,31 @@
+[package]
+name = "ef_ubench"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "ef_ubench_lib"
+
+[[bin]]
+name = "ef_ubench_bin"
+path = "src/main.rs"
+
+[build-dependencies]
+bindgen.workspace = true
+
+[dev-dependencies]
+criterion = "0.5.1"
+
+[dependencies]
+encapfn.workspace = true
+encapfn-mpk = { path = "../../encapfn-mpk" }
+env_logger = "0.11.3"
+
+[[bench]]
+name = "invoke_ubench"
+harness = false
+
+[[bench]]
+name = "validation_ubench"
+harness = false
+

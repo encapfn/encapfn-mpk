@@ -99,3 +99,8 @@ void demo_100args(
 	size_t a90, size_t a91, size_t a92, size_t a93, size_t a94,
 	size_t a95, size_t a96, size_t a97, size_t a98, size_t a99
 ) {}
+
+void demo_invoke_callback(void (*callback_fn)()) {
+	callback_fn();
+}
+

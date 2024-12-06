@@ -47,3 +47,11 @@ harness = false
 [[bench]]
 name = "process_startup_demo_nop"
 harness = false
+
+[[bench]]
+name = "upgrade_ubench"
+harness = false
+
+[[bench]]
+name = "callback_ubench"
+harness = false

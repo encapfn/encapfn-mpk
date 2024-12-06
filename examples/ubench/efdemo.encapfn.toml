@@ -36,6 +36,9 @@ fntab_id = 10
 [functions.demo_4args]
 fntab_id = 11
 
+[functions.demo_invoke_callback]
+fntab_id = 12
+
 # [functions.malloc]
 # fntab_id = 4
 #

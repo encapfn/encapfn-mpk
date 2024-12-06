@@ -340,6 +340,8 @@ dependencies = [
  "encapfn",
  "encapfn-mpk",
  "env_logger",
+ "rand",
+ "sandcrust",
 ]
 
 [[package]]

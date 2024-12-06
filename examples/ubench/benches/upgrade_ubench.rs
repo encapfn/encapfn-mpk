@@ -8,7 +8,7 @@ use encapfn::types::{AccessScope, AllocScope, EFPtr};
 use ef_ubench_lib::libefdemo::LibEFDemo;
 use ef_ubench_lib::with_mpkrt_lib;
 
-use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, CriterionThroughput};
+use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
 
 const STACK_RANDOMIZE_ITERS: usize = 1;
 

@@ -3,7 +3,7 @@ use rand::{Rng, SeedableRng};
 
 use encapfn::branding::EFID;
 use encapfn::rt::EncapfnRt;
-use encapfn::types::{AccessScope, AllocScope, EFPtr};
+use encapfn::types::{AccessScope, AllocScope};
 
 use ef_ubench_lib::libefdemo::LibEFDemo;
 use ef_ubench_lib::with_mpkrt_lib;

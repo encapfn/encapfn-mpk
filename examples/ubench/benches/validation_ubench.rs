@@ -1,118 +1,139 @@
-#![feature(naked_functions)]
+use rand::distributions::{DistString, Standard, Uniform};
+use rand::rngs::SmallRng;
+use rand::{Rng, SeedableRng};
 
-use std::time::Instant;
-
-use encapfn::branding::EFID;
 use encapfn::rt::EncapfnRt;
-use encapfn::types::{AccessScope, AllocScope};
 
 use ef_ubench_lib::libefdemo::LibEFDemo;
 use ef_ubench_lib::with_mpkrt_lib;
 
-#[derive(Copy, Clone, Debug)]
-struct BenchLoopRes {
-    start: Instant,
-    end: Instant,
-    iters: u32,
-}
+use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
 
-const PRINT_BENCH: bool = false;
+const STACK_RANDOMIZE_ITERS: usize = 1;
 
-#[inline(always)]
-fn bench_loop(label: &str, iters: u32, f: &mut impl FnMut()) -> BenchLoopRes {
-    if PRINT_BENCH {
-        println!("{}: running {} iterations...", label, iters);
-    }
-
-    let start = Instant::now();
-    for _ in 0..iters {
-        f();
-    }
-    let end = Instant::now();
-
-    if PRINT_BENCH {
-        println!(
-            "{}: took {:?} for {} iterations ({:?} per iteration)",
-            label,
-            end.duration_since(start),
-            iters,
-            end.duration_since(start) / iters,
-        );
-    }
-
-    BenchLoopRes { start, end, iters }
-}
-
-fn bench_validation<ID: EFID, RT: EncapfnRt<ID = ID>, L: LibEFDemo<ID, RT, RT = RT>>(
-    lib: &L,
-    alloc: &mut AllocScope<'_, RT::AllocTracker<'_>, RT::ID>,
-    access: &mut AccessScope<RT::ID>,
-    label: &str,
-    iters: u32,
-    size: usize,
-) -> BenchLoopRes {
-    lib.rt()
-        .allocate_stacked_slice_mut::<u8, _, _>(size, alloc, |slice, _alloc| {
-            slice.write_from_iter(core::iter::repeat(b'a'), access);
-
-            let slice_ref = &slice;
-            bench_loop(
-                &format!("{} - validate, {} bytes", label, size),
-                iters,
-                &mut || {
-                    core::hint::black_box(
-                        core::hint::black_box(slice_ref)
-                            .as_immut()
-                            .validate_as_str(access)
-                            .unwrap(),
-                    );
-                },
+fn push_stack_bytes<R>(bytes: usize, f: impl FnOnce() -> R) -> R {
+    use encapfn::rt::mock::MockRtAllocator;
+    let stack_alloc = encapfn::rt::mock::stack_alloc::StackAllocator::<
+        encapfn::rt::mock::stack_alloc::StackFrameAllocAMD64,
+    >::new();
+    unsafe {
+        stack_alloc
+            .with_alloc(
+                core::alloc::Layout::from_size_align(bytes, 1).unwrap(),
+                |_| f(),
             )
-        })
-        .unwrap()
+            .map_err(|_| ())
+            .unwrap()
+    }
 }
 
-fn print_avg_result(label: &str, results: &[Option<BenchLoopRes>]) {
-    let mut sum = std::time::Duration::from_nanos(0);
+pub fn criterion_benchmark(c: &mut Criterion) {
+    env_logger::init();
 
-    for res in results {
-        let res = res.unwrap();
-        sum = sum
-            .checked_add(res.end.duration_since(res.start) / res.iters)
-            .unwrap();
-    }
-
-    println!(
-        "{},{:?},{},{}",
-        label,
-        sum / (results.len() as u32),
-        results.len(),
-        results[0].unwrap().iters
-    );
-}
-
-fn main() {
-    let mut validate_bench_res = [(0, None); 1000];
-    for (i, (size, _res)) in validate_bench_res.iter_mut().enumerate() {
-        *size = core::cmp::max(1, i * 1000);
-    }
+    let mut prng = SmallRng::seed_from_u64(0xDEADBEEFCAFEBABE);
 
     encapfn::branding::new(|brand| {
         with_mpkrt_lib(brand, |lib, mut alloc, mut access| {
-            for (size, res) in validate_bench_res.iter_mut() {
-                *res = Some(bench_validation(
-                    &lib,
-                    &mut alloc,
-                    &mut access,
-                    "",
-                    1_000,
-                    *size,
-                ));
+            let mut group = c.benchmark_group("validation");
+            for size in (0..).map(|n| 8usize.pow(n)).take(10) {
+                let to_validate_bytes = (&mut prng)
+                    .sample_iter(Uniform::new_inclusive(u8::MIN, u8::MAX))
+                    .take(size)
+                    .collect::<Vec<u8>>();
+
+                let to_validate_string = DistString::sample_string(&Standard, &mut prng, size);
+
+                group.throughput(Throughput::Bytes(size as u64));
+
+                group.bench_with_input(BenchmarkId::new("u8", size), &size, |b, _| {
+                    for _ in 0..STACK_RANDOMIZE_ITERS {
+                        let stack_bytes: usize = (&mut prng)
+                            .gen_range(std::ops::RangeInclusive::new(1_usize, 4095_usize));
+                        let foreign_stack_bytes: usize = (&mut prng)
+                            .gen_range(std::ops::RangeInclusive::new(1_usize, 4095_usize));
+                        push_stack_bytes(stack_bytes, || {
+                            lib.rt()
+                                .allocate_stacked_mut(
+                                    std::alloc::Layout::from_size_align(foreign_stack_bytes, 1)
+                                        .unwrap(),
+                                    &mut alloc,
+                                    |_, alloc| {
+                                        lib.rt()
+                                            .allocate_stacked_slice_mut::<u8, _, _>(
+                                                to_validate_bytes.len(),
+                                                alloc,
+                                                |slice_alloc, _alloc| {
+                                                    slice_alloc.copy_from_slice(
+                                                        &to_validate_bytes,
+                                                        &mut access,
+                                                    );
+
+                                                    let slice_ref = &slice_alloc;
+                                                    b.iter(|| {
+                                                        black_box(
+                                                            black_box(slice_ref)
+                                                                .validate(&mut access)
+                                                                .unwrap(),
+                                                        );
+                                                    })
+                                                },
+                                            )
+                                            .unwrap();
+                                    },
+                                )
+                                .unwrap();
+                        });
+                    }
+                });
+
+                group.bench_with_input(BenchmarkId::new("str", size), &size, |b, _| {
+                    for _ in 0..STACK_RANDOMIZE_ITERS {
+                        let stack_bytes: usize = (&mut prng)
+                            .gen_range(std::ops::RangeInclusive::new(1_usize, 4095_usize));
+                        let foreign_stack_bytes: usize = (&mut prng)
+                            .gen_range(std::ops::RangeInclusive::new(1_usize, 4095_usize));
+                        push_stack_bytes(stack_bytes, || {
+                            lib.rt()
+                                .allocate_stacked_mut(
+                                    std::alloc::Layout::from_size_align(foreign_stack_bytes, 1)
+                                        .unwrap(),
+                                    &mut alloc,
+                                    |_, alloc| {
+                                        lib.rt()
+                                            .allocate_stacked_slice_mut::<u8, _, _>(
+                                                to_validate_string.as_bytes().len(),
+                                                alloc,
+                                                |slice_alloc, _alloc| {
+                                                    slice_alloc.copy_from_slice(
+                                                        &to_validate_string.as_bytes(),
+                                                        &mut access,
+                                                    );
+
+                                                    let slice_ref = &slice_alloc;
+                                                    b.iter(|| {
+                                                        black_box(
+                                                            black_box(slice_ref)
+                                                                .as_immut()
+                                                                .validate_as_str(&mut access)
+                                                                .unwrap(),
+                                                        );
+                                                    })
+                                                },
+                                            )
+                                            .unwrap();
+                                    },
+                                )
+                                .unwrap();
+                        });
+                    }
+                });
             }
-        })
+            group.finish();
+        });
     });
 
-    for (size, res) in validate_bench_res {
-        print_avg_result(&format!("{}", size), &[res.clone()]);
-    }
+    println!("Finished benchmarks!");
 }
+
+criterion_group!(benches, criterion_benchmark);
+criterion_main!(benches);

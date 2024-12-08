@@ -1155,6 +1155,9 @@ impl<ID: EFID> EncapfnMPKRt<ID> {
             pkey_regions.insert(pkey_rust, vec![]);
         }
 
+        // Track the library's base memory regions:
+        let mut base_allocations = vec![];
+
         // Get a hold of the global PKEYs:
         let global_pkeys = get_global_pkeys();
         pkey_regions.insert(global_pkeys.ro, vec![]);
@@ -1365,6 +1368,11 @@ impl<ID: EFID> EncapfnMPKRt<ID> {
             },
             Cow::Borrowed("Foreign Stack"),
         ));
+        base_allocations.push(EncapfnMPKRtAllocation {
+            ptr: foreign_stack_bottom,
+            len: STACK_SIZE,
+            mutable: true,
+        });
         debug!(
             "{} Allocated foreign stack memory from {:p} down to  {:p}, protected with PKEY {}",
             log_prefix, foreign_stack_top, foreign_stack_bottom as *const u8, pkey_library
@@ -1422,6 +1430,11 @@ impl<ID: EFID> EncapfnMPKRt<ID> {
             },
             Cow::Borrowed("Foreign Heap"),
         ));
+        base_allocations.push(EncapfnMPKRtAllocation {
+            ptr: foreign_heap_start,
+            len: foreign_heap_size,
+            mutable: true,
+        });
         debug!(
             "{} Allocated heap pages at {:p} -- {:p}, protected with library PKEY {}",
             log_prefix, foreign_heap_start, foreign_heap_end, pkey_library
@@ -1693,6 +1706,11 @@ impl<ID: EFID> EncapfnMPKRt<ID> {
                     },
                     Cow::Owned(format!("Foreign Library {:?}", library.link_map_entry.name)),
                 ));
+                base_allocations.push(EncapfnMPKRtAllocation {
+                    ptr: region.start as *mut (),
+                    len: region.end as usize - region.start as usize,
+                    mutable: true,
+                });
             }
         }
 
@@ -1781,6 +1799,11 @@ impl<ID: EFID> EncapfnMPKRt<ID> {
                     },
                     Cow::Owned(format!("Common Library {:?}", library.link_map_entry.name)),
                 ));
+                base_allocations.push(EncapfnMPKRtAllocation {
+                    ptr: region.start as *mut (),
+                    len: region.end as usize - region.start as usize,
+                    mutable: false,
+                });
             }
         }
 
@@ -1811,6 +1834,11 @@ impl<ID: EFID> EncapfnMPKRt<ID> {
                 },
                 Cow::Borrowed("vDSO"),
             ));
+            base_allocations.push(EncapfnMPKRtAllocation {
+                ptr: vdso_region.start as *mut (),
+                len: vdso_region.end as usize - vdso_region.start as usize,
+                mutable: false,
+            });
         }
 
         debug!(
@@ -1845,7 +1873,7 @@ impl<ID: EFID> EncapfnMPKRt<ID> {
             unsafe {
                 AllocScope::new(EncapfnMPKRtAllocChain::BaseAllocations(
                     EncapfnMPKRtBaseAllocations {
-                        allocations: Vec::new(),
+                        allocations: base_allocations,
                     },
                 ))
             },
@@ -2470,7 +2498,7 @@ impl<ID: EFID> EncapfnMPKRt<ID> {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct EncapfnMPKRtAllocation {
     ptr: *mut (),
     len: usize,
@@ -2497,7 +2525,10 @@ pub struct EncapfnMPKRtBaseAllocations {
 
 impl EncapfnMPKRtBaseAllocations {
     fn is_valid_int(&self, ptr: *mut (), len: usize, mutable: bool) -> bool {
-        // TODO: switch to binary search
+        // TODO: switch to a more efficient search (binary-search style?). We
+        // can't use binary search directly, as it might risk us skipping over
+        // overlapped allocations if there's a closer pointer to our requested
+        // one.
         self.allocations
             .iter()
             .find(|alloc| alloc.is_valid_int(ptr, len, mutable))

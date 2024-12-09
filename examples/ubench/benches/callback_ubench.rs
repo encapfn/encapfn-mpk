@@ -102,6 +102,9 @@ pub fn criterion_benchmark(c: &mut Criterion) {
     encapfn::branding::new(|brand| {
         with_mpkrt_lib(brand, |lib, mut alloc, mut access| {
             lib.rt().setup_callback(&mut |_, _, _, _|(), &mut alloc, |base_callback, alloc| {
+                // 8 callbacks!
+                bench_callback(&lib, alloc, &mut access, base_callback, 1, &mut prng, c);
+
             with_callback(&lib, alloc, &mut access, |lib, alloc, access| {
             with_callback(lib, alloc, access, |lib, alloc, access| {
             with_callback(lib, alloc, access, |lib, alloc, access| {

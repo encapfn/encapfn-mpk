@@ -36,7 +36,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
         with_mpkrt_lib(brand, |lib, mut alloc, mut access| {
             let mut group = c.benchmark_group("validation");
             //for size in (0..).map(|n| 8usize.pow(n)).take(10) {
-            for size in [1, 8, 64, 1024, 1024 * 1024] {
+            for size in [1, 8, 64, 1024, 8 * 1028, 1024 * 1024] {
                 let to_validate_bytes = (&mut prng)
                     .sample_iter(Uniform::new_inclusive(u8::MIN, u8::MAX))
                     .take(size)

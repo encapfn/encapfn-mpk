@@ -48,6 +48,7 @@ fn bench_upgrade<ID: EFID, RT: EncapfnRt<ID = ID>, L: LibEFDemo<ID, RT, RT = RT>
     allocations: usize,
     prng: &mut SmallRng,
     c: &mut Criterion,
+    randomize_foreign_stack: bool,
 ) {
     c.bench_with_input(
         BenchmarkId::new("upgrade", allocations),
@@ -59,18 +60,27 @@ fn bench_upgrade<ID: EFID, RT: EncapfnRt<ID = ID>, L: LibEFDemo<ID, RT, RT = RT>
                 let foreign_stack_bytes: usize =
                     prng.gen_range(std::ops::RangeInclusive::new(1_usize, 4095_usize));
                 push_stack_bytes(stack_bytes, || {
-                    lib.rt()
-                        .allocate_stacked_mut(
-                            std::alloc::Layout::from_size_align(foreign_stack_bytes, 1).unwrap(),
-                            alloc,
-                            |_, alloc| {
-                                // println!("Pushed {} bytes onto the stack...", stack_bytes);
-                                b.iter(|| {
-                                    black_box(black_box(base_allocation).upgrade(alloc).unwrap());
-                                });
-                            },
-                        )
-                        .unwrap();
+                    if randomize_foreign_stack {
+                        lib.rt()
+                            .allocate_stacked_mut(
+                                std::alloc::Layout::from_size_align(foreign_stack_bytes, 1)
+                                    .unwrap(),
+                                alloc,
+                                |_, alloc| {
+                                    // println!("Pushed {} bytes onto the stack...", stack_bytes);
+                                    b.iter(|| {
+                                        black_box(
+                                            black_box(base_allocation).upgrade(alloc).unwrap(),
+                                        );
+                                    });
+                                },
+                            )
+                            .unwrap();
+                    } else {
+                        b.iter(|| {
+                            black_box(black_box(base_allocation).upgrade(alloc).unwrap());
+                        });
+                    }
                 });
             }
         },
@@ -88,6 +98,9 @@ pub fn criterion_benchmark(c: &mut Criterion) {
             const ALLOC_SIZE: usize = 64;
 
             lib.rt().allocate_stacked_slice_mut::<u8, _, _>(ALLOC_SIZE, &mut alloc, |base_allocation, alloc| {
+                // 1 allocation!
+                bench_upgrade(&lib, alloc, &mut access, base_allocation.as_ptr(), 1, &mut prng, c, false);
+
             with_alloc(&lib, alloc, &mut access, ALLOC_SIZE, |lib, alloc, access| {
             with_alloc(lib, alloc, access, ALLOC_SIZE, |lib, alloc, access| {
             with_alloc(lib, alloc, access, ALLOC_SIZE, |lib, alloc, access| {
@@ -96,7 +109,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
             with_alloc(lib, alloc, access, ALLOC_SIZE, |lib, alloc, access| {
             with_alloc(lib, alloc, access, ALLOC_SIZE, |lib, alloc, access| {
                 // 7 allocations! (we'll add another one to randmomize the stack offset though)
-                bench_upgrade(lib, alloc, access, base_allocation.as_ptr(), 8, &mut prng, c);
+                bench_upgrade(lib, alloc, access, base_allocation.as_ptr(), 8, &mut prng, c, true);
 
             with_alloc(lib, alloc, access, ALLOC_SIZE, |lib, alloc, access| {
             with_alloc(lib, alloc, access, ALLOC_SIZE, |lib, alloc, access| {
@@ -155,7 +168,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
             with_alloc(lib, alloc, access, ALLOC_SIZE, |lib, alloc, access| {
             with_alloc(lib, alloc, access, ALLOC_SIZE, |lib, alloc, access| {
                 // 63 allocations! (again, we add one more in the bench function)
-                bench_upgrade(lib, alloc, access, base_allocation.as_ptr(), 64, &mut prng, c);
+                bench_upgrade(lib, alloc, access, base_allocation.as_ptr(), 64, &mut prng, c, true);
             })
             })
             })

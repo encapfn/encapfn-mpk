@@ -51,7 +51,7 @@ sandbox! {
 pub fn criterion_benchmark(c: &mut Criterion) {
     env_logger::init();
 
-    const STACK_RANDOMIZE_ITERS: usize = 10;
+    const STACK_RANDOMIZE_ITERS: usize = 3;
 
     let mut prng = SmallRng::seed_from_u64(0xDEADBEEFCAFEBABE);
 
@@ -63,7 +63,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
     encapfn::branding::new(|brand| {
         with_mpkrt_lib(brand, |lib, mut alloc, mut access| {
             let mut group = c.benchmark_group("libsodium_hash");
-            for size in (0..).map(|n| 2usize.pow(n)).skip(6).take(10) {
+            for size in (0..).map(|n| 8usize.pow(n)).skip(2).take(4) {
                 // for size in [4096_usize] {
                 let to_hash = (&mut prng)
                     .sample_iter(Uniform::new_inclusive(u8::MIN, u8::MAX))

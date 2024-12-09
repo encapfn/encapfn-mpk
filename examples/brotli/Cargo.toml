@@ -21,6 +21,6 @@ encapfn-mpk = { path = "../../encapfn-mpk" }
 env_logger = "0.11.3"
 rand = { version = "0.8.5", default-features = false, features = ["small_rng"] }
 
-# [[bench]]
-# name = "brotli_compress_comparison"
-# harness = false
+[[bench]]
+name = "brotli_compression_comparison"
+harness = false

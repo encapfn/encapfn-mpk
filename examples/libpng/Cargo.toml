@@ -9,6 +9,10 @@ name = "ef_libpng_lib"
 [[bin]]
 name = "ef_libpng"
 
+[features]
+disable_upgrade_checks = ["encapfn/disable_upgrade_checks"]
+disable_validation_checks = ["encapfn/disable_validation_checks"]
+
 [build-dependencies]
 bindgen.workspace = true
 

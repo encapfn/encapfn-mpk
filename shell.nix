@@ -42,6 +42,9 @@ in
 
       # Dependencies of criterion for benchmarks:
       gnuplot
+
+      # Evaluation reproduction script:
+      jq bc nix
     ];
 
     shellHook = ''
